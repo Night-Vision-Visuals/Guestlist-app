@@ -71,7 +71,7 @@ export default function LoginPage() {
             <div className="mb-16 space-y-4">
               <h1 className="text-8xl md:text-9xl font-light tracking-tight leading-none mb-6">
                 <span className="bg-gradient-to-b from-white via-white to-neutral-500 bg-clip-text text-transparent">
-                  Access
+                  NIGHTVISION
                 </span>
               </h1>
               <p className="text-neutral-400 text-sm tracking-[0.2em] uppercase font-light">
@@ -192,9 +192,6 @@ export default function LoginPage() {
           </div>
           <div className="text-[10px] tracking-[0.3em] uppercase text-neutral-700 font-light">
             © 2026
-          </div>
-          <div className="bg-red-500 text-white text-4xl">
-             TAILWIND TEST
           </div>
         </div>
 
