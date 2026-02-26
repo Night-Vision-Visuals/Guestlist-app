@@ -71,7 +71,7 @@ export default function LoginPage() {
             <div className="mb-16 space-y-4">
               <h1 className="text-8xl md:text-9xl font-light tracking-tight leading-none mb-6">
                 <span className="bg-gradient-to-b from-white via-white to-neutral-500 bg-clip-text text-transparent">
-                  NIGHTVISION
+                  CREW
                 </span>
               </h1>
               <p className="text-neutral-400 text-sm tracking-[0.2em] uppercase font-light">
