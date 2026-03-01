@@ -1,27 +1,51 @@
 "use client"
 
+import { useState, useRef } from "react"
 
-import { useState } from "react"
-
-<div className="bg-red-500 text-white text-4xl">
-  TAILWIND TEST
-</div>
 export default function LoginPage() {
-  const [focused, setFocused] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [message, setMessage] = useState("")
-  const [formData, setFormData] = useState({ email: "", password: "" })
+  const [code, setCode] = useState(["", "", "", "", "", ""])
+  const inputRefs = useRef<(HTMLInputElement | null)[]>([])
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault()
+  const handleCodeChange = (index: number, value: string) => {
+    // Only allow digits
+    if (!/^[a-zA-Z0-9]?$/.test(value)) return
+
+    const newCode = [...code]
+    newCode[index] = value.toUpperCase()
+    setCode(newCode)
+
+    // Auto-focus to next input
+    if (value && index < 5) {
+      inputRefs.current[index + 1]?.focus()
+    }
+
+    // Auto-submit when all digits are filled
+    if (newCode.every(digit => digit !== "")) {
+      handleSubmit(newCode)
+    }
+  }
+
+  const handleKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
+    // Backspace - move to previous input
+    if (e.key === "Backspace" && !code[index] && index > 0) {
+      inputRefs.current[index - 1]?.focus()
+    }
+  }
+
+  const handleSubmit = async (codeArray: string[] = code) => {
+    const fullCode = codeArray.join("")
+    if (fullCode.length !== 6) return
+
     setIsLoading(true)
     setMessage("")
 
     try {
-      const res = await fetch("/api/login", {
+      const res = await fetch("/api/validate-invite", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({ code: fullCode }),
       })
 
       const data = await res.json()
@@ -29,7 +53,7 @@ export default function LoginPage() {
       if (data.success) {
         setMessage("Access granted")
       } else {
-        setMessage("Invalid credentials")
+        setMessage("Invalid code")
       }
     } catch (error) {
       setMessage("An error occurred")
@@ -54,7 +78,7 @@ export default function LoginPage() {
         <div className="flex justify-between items-center">
           <div className="space-y-1">
             <div className="text-xs tracking-[0.3em] uppercase text-neutral-500 font-light">
-              Private Event
+              Night Vision
             </div>
             <div className="h-px w-12 bg-gradient-to-r from-white to-transparent" />
           </div>
@@ -70,8 +94,8 @@ export default function LoginPage() {
             {/* Header */}
             <div className="mb-16 space-y-4">
               <h1 className="text-8xl md:text-9xl font-light tracking-tight leading-none mb-6">
-                <span className="bg-gradient-to-b from-white via-white to-neutral-500 bg-clip-text text-transparent">
-                  CREW
+                <span className="bg-gradient-to-b from-white via-grey to-neutral-500 bg-clip-text text-transparent">
+                  ACCESS
                 </span>
               </h1>
               <p className="text-neutral-400 text-sm tracking-[0.2em] uppercase font-light">
@@ -81,63 +105,40 @@ export default function LoginPage() {
             </div>
 
             {/* Form */}
-            <form onSubmit={handleSubmit} className="space-y-8">
+            <form onSubmit={(e) => { e.preventDefault() }} className="space-y-8">
               
-              {/* Email Field */}
-              <div className="space-y-3 group">
-                <label className="text-xs tracking-[0.2em] uppercase text-neutral-500 group-focus-within:text-white transition-colors duration-300">
-                  Email
+              {/* Security Code Field */}
+              <div className="space-y-3">
+                <label className="text-xs tracking-[0.2em] uppercase text-neutral-500 transition-colors duration-300">
+                  Invitation Code
                 </label>
-                <div className="relative">
-                  <input
-                    type="email"
-                    value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    onFocus={() => setFocused("email")}
-                    onBlur={() => setFocused(null)}
-                    required
-                    placeholder="name@domain.com"
-                    className={`w-full bg-transparent text-white placeholder:text-neutral-600 border-b-2 pb-4 focus:outline-none transition-all duration-500 ${
-                      focused === "email"
-                        ? "border-white shadow-[0_1px_0_0_rgba(255,255,255,0.3)]"
-                        : "border-neutral-800 hover:border-neutral-700"
-                    }`}
-                  />
-                  {focused === "email" && (
-                    <div className="absolute -bottom-1 left-0 w-20 h-px bg-gradient-to-r from-white via-white to-transparent" />
-                  )}
-                </div>
-              </div>
-
-              {/* Password Field */}
-              <div className="space-y-3 group">
-                <label className="text-xs tracking-[0.2em] uppercase text-neutral-500 group-focus-within:text-white transition-colors duration-300">
-                  Password
-                </label>
-                <div className="relative">
-                  <input
-                    type="password"
-                    value={formData.password}
-                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                    onFocus={() => setFocused("password")}
-                    onBlur={() => setFocused(null)}
-                    required
-                    placeholder="••••••••"
-                    className={`w-full bg-transparent text-white placeholder:text-neutral-600 border-b-2 pb-4 focus:outline-none transition-all duration-500 ${
-                      focused === "password"
-                        ? "border-white shadow-[0_1px_0_0_rgba(255,255,255,0.3)]"
-                        : "border-neutral-800 hover:border-neutral-700"
-                    }`}
-                  />
-                  {focused === "password" && (
-                    <div className="absolute -bottom-1 left-0 w-20 h-px bg-gradient-to-r from-white via-white to-transparent" />
-                  )}
+                <div className="flex gap-3 justify-center md:justify-start">
+                  {code.map((digit, index) => (
+                    <input
+                      key={index}
+                      ref={(el) => {
+                        inputRefs.current[index] = el
+                      }}
+                      type="text"
+                      inputMode="text"
+                      maxLength={1}
+                      value={digit}
+                      onChange={(e) => handleCodeChange(index, e.target.value)}
+                      onKeyDown={(e) => handleKeyDown(index, e)}
+                      disabled={isLoading}
+                      className={`w-14 h-16 bg-transparent text-white text-center text-2xl font-light border-b-2 focus:outline-none transition-all duration-500 ${
+                        digit
+                          ? "border-white shadow-[0_1px_0_0_rgba(255,255,255,0.3)]"
+                          : "border-neutral-800 hover:border-neutral-700"
+                      } ${isLoading ? "opacity-50 cursor-not-allowed" : ""}`}
+                    />
+                  ))}
                 </div>
               </div>
 
               {/* Message Display */}
               {message && (
-                <div className={`text-sm tracking-[0.15em] py-3 transition-all duration-300 ${
+                <div className={`text-sm tracking-[0.15em] py-3 transition-all duration-300 text-center ${
                   message === "Access granted"
                     ? "text-emerald-400"
                     : "text-red-400"
@@ -146,26 +147,14 @@ export default function LoginPage() {
                 </div>
               )}
 
-              {/* Submit Button */}
-              <div className="pt-8">
-                <button
-                  type="submit"
-                  disabled={isLoading}
-                  className="group relative flex items-center gap-3 text-xs tracking-[0.3em] uppercase text-neutral-300 hover:text-white transition-all duration-500 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <span className="font-light">
-                    {isLoading ? "Authenticating" : "Enter"}
-                  </span>
-                  <span className={`text-lg transition-all duration-500 ${
-                    isLoading 
-                      ? "translate-x-2 opacity-0" 
-                      : "group-hover:translate-x-1 opacity-100"
-                  }`}>
-                    →
-                  </span>
-                </button>
-                <div className="h-px w-16 bg-gradient-to-r from-neutral-700 to-transparent mt-3 group-hover:from-white transition-all duration-500" />
-              </div>
+              {/* Loading Indicator */}
+              {isLoading && (
+                <div className="text-center">
+                  <p className="text-xs tracking-[0.3em] uppercase text-neutral-400">
+                    Verifying...
+                  </p>
+                </div>
+              )}
 
             </form>
 
@@ -174,11 +163,8 @@ export default function LoginPage() {
 
             {/* Links */}
             <div className="flex justify-between text-xs text-neutral-600 tracking-[0.15em] uppercase">
-              <button className="hover:text-white transition-colors duration-300">
-                Forgot Password
-              </button>
-              <button className="hover:text-white transition-colors duration-300">
-                Request Access
+              <button className="hover:text-white transition-colors duration-300 uppercase">
+                Contact us for access
               </button>
             </div>
 
