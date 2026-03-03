@@ -18,7 +18,7 @@ export async function POST(req: Request) {
 
     // Step 1: Find and validate the invitation code
     const { data: invitations, error: inviteError } = await supabase
-      .from("invitation_codes")
+      .from("invite_codes")
       .select("id, code_hash, redeemed, current_uses, max_uses")
       .eq("redeemed", false)
 
@@ -83,7 +83,7 @@ export async function POST(req: Request) {
 
     // Step 3: Update invitation code as used
     const { error: updateError } = await supabase
-      .from("invitation_codes")
+      .from("invite_codes")
       .update({
         redeemed: true,
         redeemed_at: new Date().toISOString(),
