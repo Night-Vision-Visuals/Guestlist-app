@@ -11,11 +11,10 @@ export default function LoginPage() {
   const inputRefs = useRef<(HTMLInputElement | null)[]>([])
   
   const [applicationData, setApplicationData] = useState({
-    first_name: "",
-    last_name: "",
-    date_of_birth: "",
+    full_name: "",
     email: "",
-    instagram: "",
+    phone: "",
+    age_confirmed: false,
     intro: ""
   })
 
@@ -80,8 +79,13 @@ export default function LoginPage() {
   const handleApplicationSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
 
-    if (!applicationData.first_name.trim() || !applicationData.last_name.trim() || !applicationData.email.trim() || !applicationData.date_of_birth) {
+    if (!applicationData.full_name.trim() || !applicationData.email.trim()) {
       setMessage("Please fill in all required fields.")
+      return
+    }
+
+    if (!applicationData.age_confirmed) {
+      setMessage("You must confirm you are 18+")
       return
     }
 
@@ -100,11 +104,10 @@ export default function LoginPage() {
       if (data.success) {
         setMessage("Application submitted successfully.")
         setApplicationData({
-          first_name: "",
-          last_name: "",
-          date_of_birth: "",
+          full_name: "",
           email: "",
-          instagram: "",
+          phone: "",
+          age_confirmed: false,
           intro: ""
         })
       } else {
@@ -217,78 +220,27 @@ export default function LoginPage() {
               /* Application Form */
               <form onSubmit={handleApplicationSubmit} className="space-y-8">
                 
-                {/* First Name Field */}
+                {/* Full Name Field */}
                 <div className="space-y-3 group">
                   <label className="text-xs tracking-[0.2em] uppercase text-neutral-500 group-focus-within:text-white transition-colors duration-300">
-                    First Name *
+                    Full Name
                   </label>
                   <div className="relative">
                     <input
                       type="text"
-                      value={applicationData.first_name}
-                      onChange={(e) => setApplicationData({ ...applicationData, first_name: e.target.value })}
-                      onFocus={() => setFocused("first_name")}
+                      value={applicationData.full_name}
+                      onChange={(e) => setApplicationData({ ...applicationData, full_name: e.target.value })}
+                      onFocus={() => setFocused("full_name")}
                       onBlur={() => setFocused(null)}
                       required
-                      placeholder="Your first name"
+                      placeholder="Your name"
                       className={`w-full bg-transparent text-white placeholder:text-neutral-600 border-b-2 pb-4 focus:outline-none transition-all duration-500 ${
-                        focused === "first_name"
+                        focused === "full_name"
                           ? "border-white shadow-[0_1px_0_0_rgba(255,255,255,0.3)]"
                           : "border-neutral-800 hover:border-neutral-700"
                       }`}
                     />
-                    {focused === "first_name" && (
-                      <div className="absolute -bottom-1 left-0 w-20 h-px bg-gradient-to-r from-white via-white to-transparent" />
-                    )}
-                  </div>
-                </div>
-
-                {/* Last Name Field */}
-                <div className="space-y-3 group">
-                  <label className="text-xs tracking-[0.2em] uppercase text-neutral-500 group-focus-within:text-white transition-colors duration-300">
-                    Last Name *
-                  </label>
-                  <div className="relative">
-                    <input
-                      type="text"
-                      value={applicationData.last_name}
-                      onChange={(e) => setApplicationData({ ...applicationData, last_name: e.target.value })}
-                      onFocus={() => setFocused("last_name")}
-                      onBlur={() => setFocused(null)}
-                      required
-                      placeholder="Your last name"
-                      className={`w-full bg-transparent text-white placeholder:text-neutral-600 border-b-2 pb-4 focus:outline-none transition-all duration-500 ${
-                        focused === "last_name"
-                          ? "border-white shadow-[0_1px_0_0_rgba(255,255,255,0.3)]"
-                          : "border-neutral-800 hover:border-neutral-700"
-                      }`}
-                    />
-                    {focused === "last_name" && (
-                      <div className="absolute -bottom-1 left-0 w-20 h-px bg-gradient-to-r from-white via-white to-transparent" />
-                    )}
-                  </div>
-                </div>
-
-                {/* Date of Birth Field */}
-                <div className="space-y-3 group">
-                  <label className="text-xs tracking-[0.2em] uppercase text-neutral-500 group-focus-within:text-white transition-colors duration-300">
-                    Date of Birth *
-                  </label>
-                  <div className="relative">
-                    <input
-                      type="date"
-                      value={applicationData.date_of_birth}
-                      onChange={(e) => setApplicationData({ ...applicationData, date_of_birth: e.target.value })}
-                      onFocus={() => setFocused("date_of_birth")}
-                      onBlur={() => setFocused(null)}
-                      required
-                      className={`w-full bg-transparent text-white placeholder:text-neutral-600 border-b-2 pb-4 focus:outline-none transition-all duration-500 ${
-                        focused === "date_of_birth"
-                          ? "border-white shadow-[0_1px_0_0_rgba(255,255,255,0.3)]"
-                          : "border-neutral-800 hover:border-neutral-700"
-                      }`}
-                    />
-                    {focused === "date_of_birth" && (
+                    {focused === "full_name" && (
                       <div className="absolute -bottom-1 left-0 w-20 h-px bg-gradient-to-r from-white via-white to-transparent" />
                     )}
                   </div>
@@ -297,7 +249,7 @@ export default function LoginPage() {
                 {/* Email Field */}
                 <div className="space-y-3 group">
                   <label className="text-xs tracking-[0.2em] uppercase text-neutral-500 group-focus-within:text-white transition-colors duration-300">
-                    Email *
+                    Email
                   </label>
                   <div className="relative">
                     <input
@@ -320,29 +272,45 @@ export default function LoginPage() {
                   </div>
                 </div>
 
-                {/* Instagram Field */}
+                {/* Phone Field */}
                 <div className="space-y-3 group">
                   <label className="text-xs tracking-[0.2em] uppercase text-neutral-500 group-focus-within:text-white transition-colors duration-300">
-                    Instagram (optional)
+                    Phone (optional)
                   </label>
                   <div className="relative">
                     <input
-                      type="text"
-                      value={applicationData.instagram}
-                      onChange={(e) => setApplicationData({ ...applicationData, instagram: e.target.value })}
-                      onFocus={() => setFocused("instagram")}
+                      type="tel"
+                      value={applicationData.phone}
+                      onChange={(e) => setApplicationData({ ...applicationData, phone: e.target.value })}
+                      onFocus={() => setFocused("phone")}
                       onBlur={() => setFocused(null)}
-                      placeholder="@username"
+                      placeholder="+1 (555) 123-4567"
                       className={`w-full bg-transparent text-white placeholder:text-neutral-600 border-b-2 pb-4 focus:outline-none transition-all duration-500 ${
-                        focused === "instagram"
+                        focused === "phone"
                           ? "border-white shadow-[0_1px_0_0_rgba(255,255,255,0.3)]"
                           : "border-neutral-800 hover:border-neutral-700"
                       }`}
                     />
-                    {focused === "instagram" && (
+                    {focused === "phone" && (
                       <div className="absolute -bottom-1 left-0 w-20 h-px bg-gradient-to-r from-white via-white to-transparent" />
                     )}
                   </div>
+                </div>
+
+                {/* Age Confirmation */}
+                <div className="space-y-3">
+                  <label className="flex items-center gap-3 cursor-pointer group">
+                    <input
+                      type="checkbox"
+                      checked={applicationData.age_confirmed}
+                      onChange={(e) => setApplicationData({ ...applicationData, age_confirmed: e.target.checked })}
+                      className="w-5 h-5 rounded border border-neutral-600 bg-transparent cursor-pointer accent-white"
+                      required
+                    />
+                    <span className="text-xs tracking-[0.15em] uppercase text-neutral-400 group-hover:text-white transition-colors duration-300">
+                      I confirm I am 18+
+                    </span>
+                  </label>
                 </div>
 
                 {/* Intro Field */}
@@ -356,7 +324,7 @@ export default function LoginPage() {
                       onChange={(e) => setApplicationData({ ...applicationData, intro: e.target.value })}
                       onFocus={() => setFocused("intro")}
                       onBlur={() => setFocused(null)}
-                      placeholder="Tell us something interesting about yourself..."
+                      placeholder="Tell us about yourself..."
                       rows={4}
                       className={`w-full bg-transparent text-white placeholder:text-neutral-600 border-b-2 pb-4 focus:outline-none transition-all duration-500 resize-none ${
                         focused === "intro"

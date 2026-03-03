@@ -1,9 +1,7 @@
 "use client"
 
 import { useState } from "react"
-<div className="bg-red-500 text-white text-4xl">
-  TAILWIND TEST
-</div>
+
 export default function Home() {
   const [code, setCode] = useState("")
   const [accessGranted, setAccessGranted] = useState(false)
