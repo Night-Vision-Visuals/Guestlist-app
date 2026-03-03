@@ -67,12 +67,14 @@ export default function LoginPage() {
         setMessage("")
         // Store code for later use when submitting application
       } else {
-        setMessage("Invalid code")
+        // Display the actual error message from the API
+        setMessage(data.error || "Invalid code")
         setCode(["", "", "", "", "", ""])
         inputRefs.current[0]?.focus()
       }
     } catch (error) {
-      setMessage("An error occurred")
+      console.error("Code validation error:", error)
+      setMessage("An error occurred. Please try again.")
       setCode(["", "", "", "", "", ""])
     } finally {
       setIsLoading(false)
@@ -113,9 +115,11 @@ export default function LoginPage() {
           intro: ""
         })
       } else {
+        // Display the actual error message from the API
         setMessage(data.error || "Submission failed. Please try again.")
       }
     } catch (error) {
+      console.error("Application submission error:", error)
       setMessage("An error occurred. Please try again.")
     } finally {
       setIsLoading(false)
@@ -259,7 +263,7 @@ export default function LoginPage() {
                     {/* Message Display */}
                     {message && (
                       <div className={`text-sm tracking-[0.15em] py-3 transition-all duration-300 text-center ${
-                        message === "Access granted"
+                        message.includes("success") || message.includes("Access granted")
                           ? "text-emerald-400"
                           : "text-red-400"
                       }`}>
