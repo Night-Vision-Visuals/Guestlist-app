@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 
 export default function AdminLoginPage() {
@@ -8,7 +8,35 @@ export default function AdminLoginPage() {
   const [focused, setFocused] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [message, setMessage] = useState("")
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true)
   const [formData, setFormData] = useState({ username: "", password: "" })
+
+  useEffect(() => {
+    // Check if user is already authenticated
+    checkIfAlreadyLoggedIn()
+  }, [])
+
+  const checkIfAlreadyLoggedIn = async () => {
+    try {
+      // Try to fetch applications - if it succeeds, user is authenticated
+      const res = await fetch("/api/applications", {
+        credentials: "include"
+      })
+
+      if (res.status === 200) {
+        // User is authenticated, redirect to dashboard
+        console.log("User already logged in, redirecting to dashboard")
+        router.push("/dashboard")
+        return
+      }
+
+      // Not authenticated
+      setIsCheckingAuth(false)
+    } catch (error) {
+      console.log("Not authenticated")
+      setIsCheckingAuth(false)
+    }
+  }
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -23,7 +51,7 @@ export default function AdminLoginPage() {
           username: formData.username,
           password: formData.password,
         }),
-        credentials: "include" // Include cookies
+        credentials: "include"
       })
 
       const data = await res.json()
@@ -44,6 +72,18 @@ export default function AdminLoginPage() {
     } finally {
       setIsLoading(false)
     }
+  }
+
+  if (isCheckingAuth) {
+    return (
+      <div className="min-h-screen bg-black text-white overflow-hidden flex items-center justify-center">
+        <div className="animate-pulse">
+          <p className="text-lg tracking-[0.2em] uppercase text-neutral-400">
+            Checking authentication...
+          </p>
+        </div>
+      </div>
+    )
   }
 
   return (

@@ -1,41 +1,64 @@
 import { NextResponse } from "next/server"
 import { supabase } from "@/lib/supabase"
+import { verifyAdminSession } from "@/lib/auth"
 
 export async function POST(req: Request) {
-  const { id, action } = await req.json()
+  try {
+    // Check if admin is authenticated
+    const admin = await verifyAdminSession()
 
-  if (!id || !action) {
-    return NextResponse.json({ error: "Invalid request" }, { status: 400 })
-  }
-
-  let newStatus = ""
-
-  if (action === "approve") {
-    // Count approved
-    const { count } = await supabase
-      .from("applications")
-      .select("*", { count: "exact", head: true })
-      .eq("status", "approved")
-
-    if (count && count >= 130) {
-      newStatus = "waitlist"
-    } else {
-      newStatus = "approved"
+    if (!admin) {
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401 }
+      )
     }
+
+    const { id, action } = await req.json()
+
+    if (!id || !action) {
+      return NextResponse.json({ error: "Invalid request" }, { status: 400 })
+    }
+
+    let newStatus = ""
+
+    if (action === "approve") {
+      // Count approved
+      const { count } = await supabase
+        .from("applications")
+        .select("*", { count: "exact", head: true })
+        .eq("status", "approved")
+
+      if (count && count >= 130) {
+        newStatus = "waitlist"
+      } else {
+        newStatus = "approved"
+      }
+    }
+
+    if (action === "reject") {
+      newStatus = "rejected"
+    }
+
+    if (action === "waitlist") {
+      newStatus = "waitlist"
+    }
+
+    const { error } = await supabase
+      .from("applications")
+      .update({ status: newStatus })
+      .eq("id", id)
+
+    if (error) {
+      return NextResponse.json({ error: "Update failed" }, { status: 500 })
+    }
+
+    return NextResponse.json({ success: true })
+  } catch (error) {
+    console.error("Error:", error)
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    )
   }
-
-  if (action === "reject") {
-    newStatus = "rejected"
-  }
-
-  const { error } = await supabase
-    .from("applications")
-    .update({ status: newStatus })
-    .eq("id", id)
-
-  if (error) {
-    return NextResponse.json({ error: "Update failed" }, { status: 500 })
-  }
-
-  return NextResponse.json({ success: true })
 }
