@@ -17,30 +17,37 @@ interface Application {
   event_id: string
 }
 
-interface Event {
-  id: string
-  name: string
-  date: string
-}
-
 export default function DashboardPage() {
   const router = useRouter()
   const [applications, setApplications] = useState<Application[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  const [message, setMessage] = useState("")
+  const [error, setError] = useState("")
   const [searchTerm, setSearchTerm] = useState("")
   const [filterStatus, setFilterStatus] = useState("all")
   const [eventName, setEventName] = useState("Event")
   const [eventDate, setEventDate] = useState("")
+  const [isAuthenticated, setIsAuthenticated] = useState(true)
 
   useEffect(() => {
+    // Fetch applications on mount
     fetchApplications()
   }, [])
 
   const fetchApplications = async () => {
     try {
       setIsLoading(true)
-      const res = await fetch("/api/applications")
+      const res = await fetch("/api/applications", {
+        method: "GET",
+        credentials: "include"
+      })
+
+      // If 401 or 403, user is not authenticated
+      if (res.status === 401 || res.status === 403) {
+        console.log("Unauthorized access, redirecting to admin")
+        setIsAuthenticated(false)
+        router.push("/admin")
+        return
+      }
 
       if (!res.ok) {
         throw new Error("Failed to fetch applications")
@@ -49,16 +56,16 @@ export default function DashboardPage() {
       const data = await res.json()
       setApplications(data || [])
 
-      // Extract event info from first application (you can adjust this based on your needs)
-      if (data && data.length > 0) {
-        // Fetch event details if you have an event API
-        // For now, we'll use a placeholder
-        setEventName(process.env.NEXT_PUBLIC_EVENT_NAME || "Event")
-        setEventDate(process.env.NEXT_PUBLIC_EVENT_DATE || "")
-      }
+      // Extract event info from environment
+      setEventName(process.env.NEXT_PUBLIC_EVENT_NAME || "Event")
+      setEventDate(process.env.NEXT_PUBLIC_EVENT_DATE || "")
+      setError("")
+      setIsAuthenticated(true)
     } catch (err) {
-      setMessage("Error fetching applications")
-      console.error(err)
+      console.error("Fetch error:", err)
+      setError("Error fetching applications")
+      setIsAuthenticated(false)
+      router.push("/admin")
     } finally {
       setIsLoading(false)
     }
@@ -70,27 +77,44 @@ export default function DashboardPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id, action }),
+        credentials: "include"
       })
+
+      if (res.status === 401 || res.status === 403) {
+        setIsAuthenticated(false)
+        router.push("/admin")
+        return
+      }
 
       if (!res.ok) {
         throw new Error("Failed to update status")
       }
 
-      setMessage("Status updated successfully")
-      setTimeout(() => setMessage(""), 3000)
+      // Refresh applications
       fetchApplications()
     } catch (err) {
       console.error(err)
-      setMessage("Error updating status")
+      setError("Error updating status")
     }
   }
 
   const logout = async () => {
     try {
-      await fetch("/api/logout", { method: "POST" })
-      router.push("/admin")
+      const res = await fetch("/api/logout", {
+        method: "POST",
+        credentials: "include"
+      })
+
+      if (res.ok) {
+        setIsAuthenticated(false)
+        setApplications([])
+        router.push("/admin")
+      } else {
+        setError("Logout failed")
+      }
     } catch (err) {
-      console.error(err)
+      console.error("Logout error:", err)
+      setError("An error occurred during logout")
     }
   }
 
@@ -135,6 +159,27 @@ export default function DashboardPage() {
     }
   }
 
+  // If not authenticated, show loading screen
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-black text-white overflow-hidden">
+        <div className="fixed inset-0 z-0">
+          <div className="absolute inset-0 bg-gradient-to-br from-neutral-900 via-black to-black" />
+          <div className="absolute top-0 left-1/4 w-96 h-96 bg-white/10 rounded-full blur-3xl opacity-20 animate-pulse" />
+          <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-white/5 rounded-full blur-3xl opacity-20 animate-pulse" />
+        </div>
+
+        <div className="relative z-10 min-h-screen flex items-center justify-center">
+          <div className="text-center space-y-4">
+            <p className="text-lg tracking-[0.2em] uppercase text-neutral-400">
+              Redirecting...
+            </p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-black text-white overflow-hidden">
@@ -159,7 +204,7 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-black text-white overflow-hidden">
+    <div className="min-h-screen bg-black text-white">
       {/* Animated gradient background */}
       <div className="fixed inset-0 z-0">
         <div className="absolute inset-0 bg-gradient-to-br from-neutral-900 via-black to-black" />
@@ -212,16 +257,10 @@ export default function DashboardPage() {
             <div className="h-px bg-gradient-to-r from-white/40 to-transparent w-20" />
           </div>
 
-          {/* Message Display */}
-          {message && (
-            <div
-              className={`mb-8 text-sm tracking-[0.15em] py-3 px-4 border ${
-                message === "Status updated successfully"
-                  ? "border-emerald-400/30 text-emerald-400 bg-emerald-400/5"
-                  : "border-red-400/30 text-red-400 bg-red-400/5"
-              }`}
-            >
-              {message}
+          {/* Error Message */}
+          {error && (
+            <div className="mb-8 text-sm tracking-[0.15em] py-3 px-4 border border-red-400/30 text-red-400 bg-red-400/5">
+              {error}
             </div>
           )}
 
@@ -249,6 +288,14 @@ export default function DashboardPage() {
               </select>
             </div>
           </div>
+
+          {/* Refresh Button */}
+          <button
+            onClick={fetchApplications}
+            className="mb-8 px-4 py-2 bg-neutral-900 border border-neutral-800 text-neutral-300 hover:text-white hover:border-neutral-600 transition-all duration-300 text-xs tracking-[0.2em] uppercase rounded"
+          >
+            Refresh
+          </button>
 
           {/* Applications List */}
           <div className="space-y-4">

@@ -7,6 +7,8 @@ export async function POST(req: Request) {
   try {
     const { username, password } = await req.json()
 
+    console.log("Login attempt:", username)
+
     // Validate input
     if (!username || !password) {
       return NextResponse.json(
@@ -76,21 +78,26 @@ export async function POST(req: Request) {
         { expiresIn: "1d" }
       )
 
+      console.log("Token generated for:", admin.username)
+
       // Create response with success message
       const response = NextResponse.json(
         { success: true, message: "Login successful" },
         { status: 200 }
       )
 
-      // Set HTTP-only cookie
-      response.cookies.set("admin_token", token, {
+      // Set HTTP-only cookie with explicit settings
+      response.cookies.set({
+        name: "admin_token",
+        value: token,
         httpOnly: true,
         secure: process.env.NODE_ENV === "production",
         sameSite: "strict",
         path: "/",
-        maxAge: 86400, // 1 day in seconds
+        maxAge: 86400 // 1 day in seconds
       })
 
+      console.log("Cookie set successfully")
       return response
     } catch (jwtError) {
       console.error("JWT signing error:", jwtError)
