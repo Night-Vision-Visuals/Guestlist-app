@@ -1,20 +1,13 @@
 import { jwtVerify } from "jose"
 import { cookies } from "next/headers"
 
-// Get JWT secret from environment
-const secret = new TextEncoder().encode(process.env.JWT_SECRET || "")
-
 export interface AdminSession {
   adminId: string
   username: string
-  iat: number
-  exp: number
 }
 
-/**
- * Verify the admin session from the admin_token cookie
- * Returns the decoded admin object if valid, null if invalid
- */
+const secret = new TextEncoder().encode(process.env.JWT_SECRET || "")
+
 export async function verifyAdminSession(): Promise<AdminSession | null> {
   try {
     const cookieStore = await cookies()
@@ -25,15 +18,18 @@ export async function verifyAdminSession(): Promise<AdminSession | null> {
       return null
     }
 
+    console.log("Token found, verifying...")
+
     // Verify JWT token
     const verified = await jwtVerify(token, secret)
     
     if (!verified.payload) {
-      console.log("JWT verification failed - no payload")
+      console.log("JWT verification failed: no payload")
       return null
     }
 
-    const admin = verified.payload as AdminSession
+    // Cast to unknown first, then to AdminSession
+    const admin = verified.payload as unknown as AdminSession
     
     console.log("Admin session verified:", admin.username)
     return admin
@@ -41,11 +37,4 @@ export async function verifyAdminSession(): Promise<AdminSession | null> {
     console.error("Auth verification error:", error)
     return null
   }
-}
-
-/**
- * Get current admin session (alias for verifyAdminSession)
- */
-export async function getCurrentAdmin(): Promise<AdminSession | null> {
-  return verifyAdminSession()
 }

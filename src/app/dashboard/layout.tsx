@@ -1,5 +1,6 @@
 import { verifyAdminSession } from "@/lib/auth"
 import { redirect } from "next/navigation"
+import  Sidebar  from "@/app/components/Sidebar"
 
 export default async function DashboardLayout({
   children,
@@ -14,6 +15,13 @@ export default async function DashboardLayout({
     redirect("/admin")
   }
 
-  // Admin is authenticated, render the dashboard
-  return <>{children}</>
+  // Admin is authenticated, render with sidebar
+  return (
+    <div className="flex min-h-screen bg-black text-white">
+      <Sidebar />
+      <main className="flex-1 w-full md:w-auto">
+        {children}
+      </main>
+    </div>
+  )
 }

@@ -3,6 +3,11 @@
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 
+interface Admin {
+  id: string
+  username: string
+}
+
 interface Invitation {
   id: string
   code_hash: string
@@ -10,9 +15,9 @@ interface Invitation {
   current_uses: number
   redeemed: boolean
   revoked_at: string | null
-  description: string | null
   created_at: string
-  redeemed_by_guest_id: string | null
+  created_by_admin_id: string
+  admin: Admin | null
 }
 
 export default function InvitesPage() {
@@ -24,10 +29,8 @@ export default function InvitesPage() {
   const [showCreateForm, setShowCreateForm] = useState(false)
   const [isCreating, setIsCreating] = useState(false)
   const [formData, setFormData] = useState({
-    max_uses: 5,
-    description: ""
+    max_uses: 1
   })
-  const [copiedCodeId, setCopiedCodeId] = useState<string | null>(null)
 
   useEffect(() => {
     fetchInvites()
@@ -71,8 +74,7 @@ export default function InvitesPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          max_uses: parseInt(formData.max_uses.toString()),
-          description: formData.description || null
+          max_uses: parseInt(formData.max_uses.toString())
         }),
         credentials: "include"
       })
@@ -84,7 +86,7 @@ export default function InvitesPage() {
       }
 
       setSuccess(`Code created: ${data.code}`)
-      setFormData({ max_uses: 5, description: "" })
+      setFormData({ max_uses: 1 })
       setShowCreateForm(false)
       
       // Copy code to clipboard
@@ -113,15 +115,18 @@ export default function InvitesPage() {
         credentials: "include"
       })
 
+      const data = await res.json()
+
       if (!res.ok) {
-        throw new Error("Failed to revoke invitation")
+        throw new Error(data.error || "Failed to revoke invitation")
       }
 
       setSuccess("Invitation code revoked")
+      setError("")
       fetchInvites()
     } catch (err) {
       console.error(err)
-      setError("Error revoking invitation")
+      setError(err instanceof Error ? err.message : "Error revoking invitation")
     }
   }
 
@@ -260,19 +265,6 @@ export default function InvitesPage() {
                   />
                 </div>
 
-                <div>
-                  <label className="text-xs tracking-[0.2em] uppercase text-neutral-500 mb-2 block">
-                    Description (Optional)
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.description}
-                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    placeholder="e.g., VIP guests, Early bird, etc."
-                    className="w-full bg-transparent border-b border-neutral-800 px-0 py-3 text-white placeholder-neutral-600 focus:outline-none focus:border-neutral-600 transition-all duration-300 text-sm"
-                  />
-                </div>
-
                 <button
                   type="submit"
                   disabled={isCreating}
@@ -332,19 +324,19 @@ export default function InvitesPage() {
 
                     <div>
                       <p className="text-xs tracking-[0.2em] uppercase text-neutral-500 mb-2">
-                        Created
+                        Created By
                       </p>
                       <p className="text-white font-light text-sm">
-                        {new Date(invite.created_at).toLocaleDateString()}
+                        {invite.admin?.username || "Unknown"}
                       </p>
                     </div>
 
                     <div>
                       <p className="text-xs tracking-[0.2em] uppercase text-neutral-500 mb-2">
-                        Description
+                        Created
                       </p>
-                      <p className="text-neutral-400 text-sm">
-                        {invite.description || "-"}
+                      <p className="text-white font-light text-sm">
+                        {new Date(invite.created_at).toLocaleDateString()}
                       </p>
                     </div>
                   </div>

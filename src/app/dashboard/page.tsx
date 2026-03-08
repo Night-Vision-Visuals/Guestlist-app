@@ -98,26 +98,6 @@ export default function DashboardPage() {
     }
   }
 
-  const logout = async () => {
-    try {
-      const res = await fetch("/api/logout", {
-        method: "POST",
-        credentials: "include"
-      })
-
-      if (res.ok) {
-        setIsAuthenticated(false)
-        setApplications([])
-        router.push("/admin")
-      } else {
-        setError("Logout failed")
-      }
-    } catch (err) {
-      console.error("Logout error:", err)
-      setError("An error occurred during logout")
-    }
-  }
-
   // Filter applications
   const filteredApplications = applications.filter((app) => {
     const matchesSearch =
@@ -170,11 +150,9 @@ export default function DashboardPage() {
         </div>
 
         <div className="relative z-10 min-h-screen flex items-center justify-center">
-          <div className="text-center space-y-4">
-            <p className="text-lg tracking-[0.2em] uppercase text-neutral-400">
-              Redirecting...
-            </p>
-          </div>
+          <p className="text-lg tracking-[0.2em] uppercase text-neutral-400">
+            Redirecting...
+          </p>
         </div>
       </div>
     )
@@ -183,7 +161,6 @@ export default function DashboardPage() {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-black text-white overflow-hidden">
-        {/* Animated gradient background */}
         <div className="fixed inset-0 z-0">
           <div className="absolute inset-0 bg-gradient-to-br from-neutral-900 via-black to-black" />
           <div className="absolute top-0 left-1/4 w-96 h-96 bg-white/10 rounded-full blur-3xl opacity-20 animate-pulse" />
@@ -214,49 +191,27 @@ export default function DashboardPage() {
 
       {/* Content */}
       <div className="relative z-10">
-        {/* Top Navigation */}
+        {/* Top Header */}
         <div className="flex justify-between items-center px-6 md:px-16 py-12 border-b border-neutral-800">
           <div className="space-y-1">
-            <div className="text-xs tracking-[0.3em] uppercase text-neutral-500 font-light">
-              NIGHT VISION
-            </div>
-            <div className="h-px w-12 bg-gradient-to-r from-white to-transparent" />
+            <h1 className="text-3xl md:text-4xl font-light tracking-tight">
+              <span className="bg-gradient-to-b from-white via-white to-neutral-500 bg-clip-text text-transparent">
+                Applications
+              </span>
+            </h1>
+            <p className="text-neutral-400 text-sm tracking-[0.2em] uppercase font-light mt-2">
+              {eventName} - {eventDate}
+            </p>
           </div>
-          <div className="flex items-center gap-8">
-            <div className="text-right">
-              <div className="text-xs tracking-[0.3em] uppercase text-neutral-500 font-light">
-                {applications.length} Applications
-              </div>
-              {eventDate && (
-                <div className="text-[10px] tracking-[0.2em] uppercase text-neutral-600 font-light mt-1">
-                  {eventDate}
-                </div>
-              )}
-            </div>
-            <button
-              onClick={logout}
-              className="text-xs tracking-[0.2em] uppercase text-neutral-500 hover:text-white transition-colors duration-300"
-            >
-              Logout
-            </button>
+          <div className="text-right">
+            <p className="text-xs tracking-[0.3em] uppercase text-neutral-500 font-light">
+              {applications.length} Total
+            </p>
           </div>
         </div>
 
         {/* Main Content */}
         <div className="px-6 md:px-16 py-12">
-          {/* Header */}
-          <div className="mb-12 space-y-4">
-            <h1 className="text-5xl md:text-6xl font-light tracking-tight">
-              <span className="bg-gradient-to-b from-white via-white to-neutral-500 bg-clip-text text-transparent">
-                {eventName}
-              </span>
-            </h1>
-            <p className="text-neutral-400 text-sm tracking-[0.2em] uppercase font-light">
-              Manage event applications
-            </p>
-            <div className="h-px bg-gradient-to-r from-white/40 to-transparent w-20" />
-          </div>
-
           {/* Error Message */}
           {error && (
             <div className="mb-8 text-sm tracking-[0.15em] py-3 px-4 border border-red-400/30 text-red-400 bg-red-400/5">
@@ -419,7 +374,7 @@ export default function DashboardPage() {
         {/* Footer */}
         <div className="flex justify-between items-center px-6 md:px-16 py-12 border-t border-neutral-800">
           <div className="text-[10px] tracking-[0.3em] uppercase text-neutral-700 font-light">
-            Admin Dashboard
+            Applications
           </div>
           <div className="text-[10px] tracking-[0.3em] uppercase text-neutral-700 font-light">
             © 2026

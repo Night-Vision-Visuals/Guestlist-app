@@ -4,7 +4,7 @@ import { verifyAdminSession } from "@/lib/auth"
 
 export async function GET() {
   try {
-    console.log("Fetching invitations list")
+    console.log("Fetching events")
 
     // Check if admin is authenticated
     const admin = await verifyAdminSession()
@@ -19,30 +19,24 @@ export async function GET() {
 
     console.log("Admin authenticated:", admin.username)
 
-    // Fetch all invitation codes with admin info
-    const { data: invites, error } = await supabase
-      .from("invite_codes")
-      .select(`
-        *,
-        admin:created_by_admin_id (
-          id,
-          username
-        )
-      `)
-      .order("created_at", { ascending: false })
+    // Fetch all events ordered by date (most recent first)
+    const { data: events, error } = await supabase
+      .from("events")
+      .select("*")
+      .order("event_date", { ascending: false })
 
     if (error) {
       console.error("Database fetch error:", error)
       return NextResponse.json(
-        { error: "Failed to fetch invitation codes" },
+        { error: "Failed to fetch events" },
         { status: 500 }
       )
     }
 
-    console.log("Invites fetched:", invites?.length || 0)
-    return NextResponse.json(invites || [])
+    console.log("Events fetched:", events?.length || 0)
+    return NextResponse.json(events || [])
   } catch (error) {
-    console.error("Invite list error:", error)
+    console.error("Events fetch error:", error)
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }
