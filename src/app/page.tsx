@@ -146,8 +146,8 @@ export default function LandingPage() {
             <Image
               src="/logo.png"
               alt="Night Vision"
-              width={64}
-              height={64}
+              width={32}
+              height={32}
               className="h-8 w-8 object-contain"
             />
             <div className="h-px w-12 bg-gradient-to-r from-white to-transparent" />
