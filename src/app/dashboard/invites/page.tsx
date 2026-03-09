@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
+import { useEventContext } from "@/lib/EventContext"
 
 interface Admin {
   id: string
@@ -17,29 +18,39 @@ interface Invitation {
   revoked_at: string | null
   created_at: string
   created_by_admin_id: string
+  event_id: string | null
   admin: Admin | null
 }
 
 export default function InvitesPage() {
   const router = useRouter()
+  const { currentEvent, isLoading: eventsLoading } = useEventContext()
   const [invites, setInvites] = useState<Invitation[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState("")
   const [success, setSuccess] = useState("")
   const [showCreateForm, setShowCreateForm] = useState(false)
   const [isCreating, setIsCreating] = useState(false)
+  const [generatedCode, setGeneratedCode] = useState<string | null>(null)
+  const [copied, setCopied] = useState(false)
   const [formData, setFormData] = useState({
     max_uses: 1
   })
 
   useEffect(() => {
-    fetchInvites()
-  }, [])
+    if (currentEvent) {
+      fetchInvites(currentEvent.id)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentEvent])
 
-  const fetchInvites = async () => {
+  const fetchInvites = async (eventId?: string) => {
     try {
       setIsLoading(true)
-      const res = await fetch("/api/invite/list", {
+      const url = eventId
+        ? `/api/invite/list?eventId=${eventId}`
+        : "/api/invite/list"
+      const res = await fetch(url, {
         credentials: "include"
       })
 
@@ -74,7 +85,8 @@ export default function InvitesPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          max_uses: parseInt(formData.max_uses.toString())
+          max_uses: parseInt(formData.max_uses.toString()),
+          event_id: currentEvent?.id || null
         }),
         credentials: "include"
       })
@@ -85,20 +97,28 @@ export default function InvitesPage() {
         throw new Error(data.error || "Failed to create invitation")
       }
 
-      setSuccess(`Code created: ${data.code}`)
+      setGeneratedCode(data.code)
       setFormData({ max_uses: 1 })
       setShowCreateForm(false)
-      
-      // Copy code to clipboard
+
+      // Copy code to clipboard automatically
       navigator.clipboard.writeText(data.code)
-      
+
       // Refresh invites list
-      fetchInvites()
+      fetchInvites(currentEvent?.id)
     } catch (err) {
       console.error(err)
       setError(err instanceof Error ? err.message : "Failed to create invitation")
     } finally {
       setIsCreating(false)
+    }
+  }
+
+  const handleCopyCode = () => {
+    if (generatedCode) {
+      navigator.clipboard.writeText(generatedCode)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
     }
   }
 
@@ -123,7 +143,7 @@ export default function InvitesPage() {
 
       setSuccess("Invitation code revoked")
       setError("")
-      fetchInvites()
+      fetchInvites(currentEvent?.id)
     } catch (err) {
       console.error(err)
       setError(err instanceof Error ? err.message : "Error revoking invitation")
@@ -160,7 +180,7 @@ export default function InvitesPage() {
     return "Active"
   }
 
-  if (isLoading) {
+  if (eventsLoading || isLoading) {
     return (
       <div className="min-h-screen bg-black text-white overflow-hidden">
         <div className="fixed inset-0 z-0">
@@ -187,6 +207,52 @@ export default function InvitesPage() {
         <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-white/5 rounded-full blur-3xl opacity-20 animate-pulse" />
       </div>
 
+      {/* Generated Code Modal */}
+      {generatedCode && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+            onClick={() => setGeneratedCode(null)}
+          />
+          {/* Modal */}
+          <div className="relative z-10 flex flex-col items-center gap-8 px-12 py-12 border border-neutral-700 bg-neutral-900/90 rounded-2xl shadow-2xl max-w-md w-full mx-4">
+            <div className="space-y-2 text-center">
+              <p className="text-[10px] tracking-[0.4em] uppercase text-neutral-500 font-light">
+                Invitation Code Created
+              </p>
+              <div className="h-px w-16 mx-auto bg-gradient-to-r from-transparent via-white/30 to-transparent" />
+            </div>
+
+            <button
+              onClick={handleCopyCode}
+              title="Click to copy"
+              className="group relative flex flex-col items-center gap-3 cursor-pointer select-none"
+            >
+              <div className="border border-neutral-700 group-hover:border-white/50 bg-black/60 group-hover:bg-neutral-800/60 transition-all duration-300 px-10 py-6 rounded-xl">
+                <p className="text-5xl font-mono font-light tracking-[0.3em] text-white">
+                  {generatedCode}
+                </p>
+              </div>
+              <span className="text-[10px] tracking-[0.3em] uppercase text-neutral-500 group-hover:text-neutral-300 transition-colors duration-300">
+                {copied ? "✓ Copied!" : "Click to copy"}
+              </span>
+            </button>
+
+            <p className="text-[11px] tracking-[0.15em] text-neutral-600 text-center max-w-xs">
+              Save this code — it won&apos;t be shown again.
+            </p>
+
+            <button
+              onClick={() => setGeneratedCode(null)}
+              className="px-8 py-2 border border-neutral-800 hover:border-neutral-600 text-neutral-400 hover:text-white text-xs tracking-[0.2em] uppercase rounded transition-all duration-300"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Content */}
       <div className="relative z-10">
         {/* Top Navigation */}
@@ -203,7 +269,7 @@ export default function InvitesPage() {
                 {invites.length} Codes
               </div>
               <div className="text-[10px] tracking-[0.2em] uppercase text-neutral-600 font-light mt-1">
-                Invitation Management
+                {currentEvent?.name || "Invitation Management"}
               </div>
             </div>
           </div>
@@ -219,7 +285,9 @@ export default function InvitesPage() {
               </span>
             </h1>
             <p className="text-neutral-400 text-sm tracking-[0.2em] uppercase font-light">
-              Create and manage invitation codes
+              {currentEvent
+                ? `${currentEvent.name} — ${new Date(currentEvent.date).toLocaleDateString()}`
+                : "Create and manage invitation codes"}
             </p>
             <div className="h-px bg-gradient-to-r from-white/40 to-transparent w-20" />
           </div>
@@ -293,9 +361,9 @@ export default function InvitesPage() {
                   <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mb-4">
                     <div>
                       <p className="text-xs tracking-[0.2em] uppercase text-neutral-500 mb-2">
-                        ID
+                        Code Hash
                       </p>
-                      <p className="text-white font-mono text-sm">{invite.id.substring(0, 8)}...</p>
+                      <p className="text-white font-mono text-sm">{invite.code_hash.substring(0, 12)}...</p>
                     </div>
 
                     <div>

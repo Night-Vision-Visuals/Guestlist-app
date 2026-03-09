@@ -2,7 +2,7 @@ import { NextResponse } from "next/server"
 import { supabase } from "@/lib/supabase"
 import { verifyAdminSession } from "@/lib/auth"
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
     console.log("Fetching invitations list")
 
@@ -19,8 +19,11 @@ export async function GET() {
 
     console.log("Admin authenticated:", admin.username)
 
-    // Fetch all invitation codes with admin info
-    const { data: invites, error } = await supabase
+    const { searchParams } = new URL(req.url)
+    const eventId = searchParams.get("eventId")
+
+    // Fetch invitation codes with admin info, optionally filtered by event
+    let query = supabase
       .from("invite_codes")
       .select(`
         *,
@@ -30,6 +33,12 @@ export async function GET() {
         )
       `)
       .order("created_at", { ascending: false })
+
+    if (eventId) {
+      query = query.eq("event_id", eventId)
+    }
+
+    const { data: invites, error } = await query
 
     if (error) {
       console.error("Database fetch error:", error)

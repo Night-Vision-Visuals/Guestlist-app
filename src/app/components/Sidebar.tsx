@@ -3,11 +3,13 @@
 import { usePathname, useRouter } from "next/navigation"
 import { BarChart3, Users, Ticket, LogOut, Menu, X } from "lucide-react"
 import { useState } from "react"
+import { useEventContext } from "@/lib/EventContext"
 
 export default function Sidebar() {
   const pathname = usePathname()
   const router = useRouter()
   const [isOpen, setIsOpen] = useState(false)
+  const { currentEvent, events, setCurrentEvent, isLoading: eventsLoading } = useEventContext()
 
   const menuItems = [
     {
@@ -80,6 +82,33 @@ export default function Sidebar() {
             </div>
             <div className="h-px w-12 bg-gradient-to-r from-white to-transparent" />
           </div>
+          {/* Event Selector */}
+          {!eventsLoading && events.length > 0 && (
+            <div className="mt-4">
+              <p className="text-[10px] tracking-[0.25em] uppercase text-neutral-600 font-light mb-2">
+                Current Event
+              </p>
+              <select
+                value={currentEvent?.id || ""}
+                onChange={(e) => {
+                  const selected = events.find((ev) => ev.id === e.target.value)
+                  if (selected) setCurrentEvent(selected)
+                }}
+                className="w-full bg-neutral-900 border border-neutral-800 px-3 py-2 text-white text-[11px] tracking-[0.1em] focus:outline-none focus:border-neutral-600 transition-all duration-300 rounded"
+              >
+                {events.map((event) => (
+                  <option key={event.id} value={event.id} className="bg-black">
+                    {event.name}
+                  </option>
+                ))}
+              </select>
+              {currentEvent && (
+                <p className="text-[10px] tracking-[0.15em] text-neutral-600 font-light mt-1">
+                  {new Date(currentEvent.date).toLocaleDateString()}
+                </p>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Navigation Menu */}

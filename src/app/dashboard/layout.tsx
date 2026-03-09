@@ -1,6 +1,7 @@
 import { verifyAdminSession } from "@/lib/auth"
 import { redirect } from "next/navigation"
-import  Sidebar  from "@/app/components/Sidebar"
+import Sidebar from "@/app/components/Sidebar"
+import { EventProvider } from "@/lib/EventContext"
 
 export default async function DashboardLayout({
   children,
@@ -15,13 +16,15 @@ export default async function DashboardLayout({
     redirect("/admin")
   }
 
-  // Admin is authenticated, render with sidebar
+  // Admin is authenticated, render with sidebar inside shared event context
   return (
-    <div className="flex min-h-screen bg-black text-white">
-      <Sidebar />
-      <main className="flex-1 w-full md:w-auto">
-        {children}
-      </main>
-    </div>
+    <EventProvider>
+      <div className="flex min-h-screen bg-black text-white">
+        <Sidebar />
+        <main className="flex-1 w-full md:w-auto">
+          {children}
+        </main>
+      </div>
+    </EventProvider>
   )
 }
