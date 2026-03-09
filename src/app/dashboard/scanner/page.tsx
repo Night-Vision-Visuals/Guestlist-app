@@ -74,6 +74,14 @@ export default function ScannerPage() {
     setError("")
 
     try {
+      // First, explicitly request camera permission before starting the reader
+      // This helps with mobile browsers that deny access after granting permission
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: { ideal: "environment" } }
+      })
+      // Stop the test stream - the reader will start its own
+      stream.getTracks().forEach(track => track.stop())
+
       const codeReader = new BrowserQRCodeReader()
       const controls = await codeReader.decodeFromVideoDevice(
         undefined,
@@ -91,11 +99,14 @@ export default function ScannerPage() {
       setScanning(true)
     } catch (err) {
       console.error("Scanner error:", err)
-      setError(
-        err instanceof Error && err.message.includes("Permission denied")
-          ? "Camera permission denied. Please allow camera access and try again."
-          : "Could not start camera. Make sure camera access is allowed."
-      )
+      const message = err instanceof Error ? err.message : String(err)
+      if (message.toLowerCase().includes("permission") || message.toLowerCase().includes("denied") || message.toLowerCase().includes("notallowed")) {
+        setError("Camera permission denied. Please allow camera access in your browser settings and try again.")
+      } else if (message.toLowerCase().includes("notfound") || message.toLowerCase().includes("no camera")) {
+        setError("No camera found on this device.")
+      } else {
+        setError("Could not start camera. Please ensure camera access is allowed and no other app is using the camera.")
+      }
     }
   }, [processQrCode])
 

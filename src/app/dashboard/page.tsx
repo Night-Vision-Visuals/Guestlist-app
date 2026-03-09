@@ -443,7 +443,7 @@ export default function DashboardPage() {
                           )}
                         </div>
                         {app.intro && (
-                          <p className="text-neutral-500 text-sm italic mb-3">&quot;{app.intro}&quot;</p>
+                          <p className="text-neutral-500 text-sm italic mb-3">"{app.intro}"</p>
                         )}
                         {app.status === "applied" && (
                           <div className="pt-3 border-t border-neutral-800/50 flex gap-2">
