@@ -43,3 +43,50 @@ export async function GET() {
     )
   }
 }
+
+export async function POST(req: Request) {
+  try {
+    const admin = await verifyAdminSession()
+
+    if (!admin) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
+    const body = await req.json()
+    const { name, event_date, location, description, guest_limit, poster_url } = body
+
+    if (!name || !event_date) {
+      return NextResponse.json(
+        { error: "Event name and date are required" },
+        { status: 400 }
+      )
+    }
+
+    const insertData: Record<string, string | number | null> = {
+      name,
+      event_date,
+      location: location || null,
+      description: description || null,
+      guest_limit: guest_limit ? parseInt(guest_limit) : null,
+      poster_url: poster_url || null,
+    }
+
+    const { data: event, error } = await supabase
+      .from("events")
+      .insert([insertData])
+      .select()
+
+    if (error) {
+      console.error("Event insert error:", error)
+      return NextResponse.json(
+        { error: "Failed to create event: " + error.message },
+        { status: 500 }
+      )
+    }
+
+    return NextResponse.json({ success: true, event: event?.[0] })
+  } catch (error) {
+    console.error("Event creation error:", error)
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+  }
+}

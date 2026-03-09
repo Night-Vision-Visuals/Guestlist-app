@@ -1,12 +1,11 @@
 import { NextResponse } from "next/server"
 import { supabase } from "@/lib/supabase"
-import bcrypt from "bcryptjs"
 
 export async function POST(req: Request) {
   try {
     const body = await req.json()
 
-    const { first_name, last_name, date_of_birth, email, instagram, intro, code } = body
+    const { first_name, last_name, date_of_birth, email, instagram, intro, code, gender, heard_about_us, datenschutz_accepted } = body
 
     console.log("Apply route called with:", { first_name, last_name, email, code })
 
@@ -19,52 +18,43 @@ export async function POST(req: Request) {
       )
     }
 
-    // Step 1: Find and validate the invitation code
-    const { data: invitations, error: inviteError } = await supabase
+    if (!gender) {
+      return NextResponse.json(
+        { error: "Please select your gender" },
+        { status: 400 }
+      )
+    }
+
+    if (!heard_about_us) {
+      return NextResponse.json(
+        { error: "Please tell us how you heard about the party" },
+        { status: 400 }
+      )
+    }
+
+    if (!datenschutz_accepted) {
+      return NextResponse.json(
+        { error: "You must accept the privacy policy" },
+        { status: 400 }
+      )
+    }
+
+    // Step 1: Find and validate the invitation code using plain text comparison
+    const { data: matchedInvitation, error: inviteError } = await supabase
       .from("invite_codes")
       .select("id, code_hash, redeemed, current_uses, max_uses")
+      .eq("code_hash", code.toUpperCase())
+      .single()
 
-    if (inviteError) {
-      console.error("Error fetching invitations:", inviteError)
-      return NextResponse.json(
-        { error: "Server error" },
-        { status: 500 }
-      )
-    }
-
-    if (!invitations || invitations.length === 0) {
-      console.log("No invitations found")
-      return NextResponse.json(
-        { error: "Invalid invitation code" },
-        { status: 401 }
-      )
-    }
-
-    console.log(`Found ${invitations.length} invitations`)
-
-    // Find matching code hash
-    let matchedInvitation = null
-    for (const invite of invitations) {
-      try {
-        const valid = await bcrypt.compare(code, invite.code_hash)
-        if (valid) {
-          matchedInvitation = invite
-          console.log("Code matched in apply:", { id: invite.id, redeemed: invite.redeemed, current_uses: invite.current_uses, max_uses: invite.max_uses })
-          break
-        }
-      } catch (bcryptError) {
-        console.error("Bcrypt error:", bcryptError)
-        continue
-      }
-    }
-
-    if (!matchedInvitation) {
+    if (inviteError || !matchedInvitation) {
       console.log("No matching invitation found")
       return NextResponse.json(
         { error: "Invalid invitation code" },
         { status: 401 }
       )
     }
+
+    console.log("Code matched in apply:", { id: matchedInvitation.id, redeemed: matchedInvitation.redeemed, current_uses: matchedInvitation.current_uses, max_uses: matchedInvitation.max_uses })
 
     // Check if invitation is already redeemed (all uses consumed)
     if (matchedInvitation.redeemed) {
@@ -98,6 +88,9 @@ export async function POST(req: Request) {
           email,
           instagram: instagram || null,
           intro: intro || null,
+          gender: gender || null,
+          heard_about_us: heard_about_us || null,
+          datenschutz_accepted: datenschutz_accepted || false,
           status: "applied"
         }
       ])

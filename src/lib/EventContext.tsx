@@ -36,9 +36,14 @@ export function EventProvider({ children }: { children: ReactNode }) {
       const res = await fetch("/api/events", { credentials: "include" })
       if (!res.ok) throw new Error("Failed to fetch events")
       const data = await res.json()
-      setEvents(data || [])
-      if (data && data.length > 0) {
-        setCurrentEvent(data[0])
+      // Map event_date to date for compatibility with the Event interface
+      const mapped = (data || []).map((ev: Event & { event_date?: string }) => ({
+        ...ev,
+        date: ev.date || ev.event_date || ""
+      }))
+      setEvents(mapped)
+      if (mapped && mapped.length > 0) {
+        setCurrentEvent(mapped[0])
       }
       setError("")
     } catch (err) {
