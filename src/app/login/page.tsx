@@ -43,6 +43,23 @@ export default function LoginPage() {
     }
   }
 
+  const handlePaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
+    e.preventDefault()
+    const pasted = e.clipboardData.getData("text").replace(/\s/g, "").toUpperCase()
+    if (!/^[A-Z0-9]+$/.test(pasted)) return
+    const chars = pasted.slice(0, 6).split("")
+    const newCode = ["", "", "", "", "", ""]
+    chars.forEach((c, i) => { newCode[i] = c })
+    setCode(newCode)
+    // Focus next empty or last
+    const nextEmpty = newCode.findIndex(c => c === "")
+    const focusIdx = nextEmpty === -1 ? 5 : nextEmpty
+    inputRefs.current[focusIdx]?.focus()
+    if (newCode.every(digit => digit !== "")) {
+      handleCodeSubmit(newCode)
+    }
+  }
+
   const handleKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
     // Backspace - move to previous input
     if (e.key === "Backspace" && !code[index] && index > 0) {
@@ -271,6 +288,7 @@ export default function LoginPage() {
                             value={digit}
                             onChange={(e) => handleCodeChange(index, e.target.value)}
                             onKeyDown={(e) => handleKeyDown(index, e)}
+                            onPaste={handlePaste}
                             disabled={isLoading}
                             className={`w-14 h-16 bg-transparent text-white text-center text-2xl font-light border-b-2 focus:outline-none transition-all duration-500 ${
                               digit
@@ -359,6 +377,35 @@ export default function LoginPage() {
                       </div>
                     </div>
 
+                    {/* Gender Field — 3rd position */}
+                    <div className="space-y-3 group">
+                      <label className="text-xs tracking-[0.2em] uppercase text-neutral-500 group-focus-within:text-white transition-colors duration-300">
+                        Gender *
+                      </label>
+                      <div className="relative">
+                        <select
+                          value={applicationData.gender}
+                          onChange={(e) => setApplicationData({ ...applicationData, gender: e.target.value })}
+                          onFocus={() => setFocused("gender")}
+                          onBlur={() => setFocused(null)}
+                          required
+                          className={`w-full bg-transparent text-white border-b-2 pb-4 focus:outline-none transition-all duration-500 appearance-none cursor-pointer ${
+                            focused === "gender"
+                              ? "border-white shadow-[0_1px_0_0_rgba(255,255,255,0.3)]"
+                              : "border-neutral-800 hover:border-neutral-700"
+                          } ${applicationData.gender === "" ? "text-neutral-600" : "text-white"}`}
+                        >
+                          <option value="" disabled className="bg-black text-neutral-600">Select gender</option>
+                          <option value="male" className="bg-black text-white">Male</option>
+                          <option value="female" className="bg-black text-white">Female</option>
+                          <option value="diverse" className="bg-black text-white">Diverse / Non-binary</option>
+                        </select>
+                        {focused === "gender" && (
+                          <div className="absolute -bottom-1 left-0 w-20 h-px bg-gradient-to-r from-white via-white to-transparent" />
+                        )}
+                      </div>
+                    </div>
+
                     {/* Date of Birth Field */}
                     <div className="space-y-3 group">
                       <label className="text-xs tracking-[0.2em] uppercase text-neutral-500 group-focus-within:text-white transition-colors duration-300">
@@ -435,60 +482,6 @@ export default function LoginPage() {
                       </div>
                     </div>
 
-                    {/* Intro Field */}
-                    <div className="space-y-3 group">
-                      <label className="text-xs tracking-[0.2em] uppercase text-neutral-500 group-focus-within:text-white transition-colors duration-300">
-                        Short Intro (optional)
-                      </label>
-                      <div className="relative">
-                        <textarea
-                          value={applicationData.intro}
-                          onChange={(e) => setApplicationData({ ...applicationData, intro: e.target.value })}
-                          onFocus={() => setFocused("intro")}
-                          onBlur={() => setFocused(null)}
-                          placeholder="Tell us something interesting about yourself..."
-                          rows={4}
-                          className={`w-full bg-transparent text-white placeholder:text-neutral-600 border-b-2 pb-4 focus:outline-none transition-all duration-500 resize-none ${
-                            focused === "intro"
-                              ? "border-white shadow-[0_1px_0_0_rgba(255,255,255,0.3)]"
-                              : "border-neutral-800 hover:border-neutral-700"
-                          }`}
-                        />
-                        {focused === "intro" && (
-                          <div className="absolute -bottom-1 left-0 w-20 h-px bg-gradient-to-r from-white via-white to-transparent" />
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Gender Field */}
-                    <div className="space-y-3 group">
-                      <label className="text-xs tracking-[0.2em] uppercase text-neutral-500 group-focus-within:text-white transition-colors duration-300">
-                        Gender *
-                      </label>
-                      <div className="relative">
-                        <select
-                          value={applicationData.gender}
-                          onChange={(e) => setApplicationData({ ...applicationData, gender: e.target.value })}
-                          onFocus={() => setFocused("gender")}
-                          onBlur={() => setFocused(null)}
-                          required
-                          className={`w-full bg-transparent text-white border-b-2 pb-4 focus:outline-none transition-all duration-500 appearance-none cursor-pointer ${
-                            focused === "gender"
-                              ? "border-white shadow-[0_1px_0_0_rgba(255,255,255,0.3)]"
-                              : "border-neutral-800 hover:border-neutral-700"
-                          } ${applicationData.gender === "" ? "text-neutral-600" : "text-white"}`}
-                        >
-                          <option value="" disabled className="bg-black text-neutral-600">Select gender</option>
-                          <option value="male" className="bg-black text-white">Male</option>
-                          <option value="female" className="bg-black text-white">Female</option>
-                          <option value="diverse" className="bg-black text-white">Diverse / Non-binary</option>
-                        </select>
-                        {focused === "gender" && (
-                          <div className="absolute -bottom-1 left-0 w-20 h-px bg-gradient-to-r from-white via-white to-transparent" />
-                        )}
-                      </div>
-                    </div>
-
                     {/* Heard About Us Field */}
                     <div className="space-y-3 group">
                       <label className="text-xs tracking-[0.2em] uppercase text-neutral-500 group-focus-within:text-white transition-colors duration-300">
@@ -555,6 +548,31 @@ export default function LoginPage() {
                           {" "}gelesen und stimme der Verarbeitung meiner personenbezogenen Daten zu. *
                         </span>
                       </label>
+                    </div>
+
+                    {/* Short Intro Field — last */}
+                    <div className="space-y-3 group">
+                      <label className="text-xs tracking-[0.2em] uppercase text-neutral-500 group-focus-within:text-white transition-colors duration-300">
+                        Short Intro (optional)
+                      </label>
+                      <div className="relative">
+                        <textarea
+                          value={applicationData.intro}
+                          onChange={(e) => setApplicationData({ ...applicationData, intro: e.target.value })}
+                          onFocus={() => setFocused("intro")}
+                          onBlur={() => setFocused(null)}
+                          placeholder="Tell us something interesting about yourself..."
+                          rows={4}
+                          className={`w-full bg-transparent text-white placeholder:text-neutral-600 border-b-2 pb-4 focus:outline-none transition-all duration-500 resize-none ${
+                            focused === "intro"
+                              ? "border-white shadow-[0_1px_0_0_rgba(255,255,255,0.3)]"
+                              : "border-neutral-800 hover:border-neutral-700"
+                          }`}
+                        />
+                        {focused === "intro" && (
+                          <div className="absolute -bottom-1 left-0 w-20 h-px bg-gradient-to-r from-white via-white to-transparent" />
+                        )}
+                      </div>
                     </div>
 
                     {/* Message Display */}

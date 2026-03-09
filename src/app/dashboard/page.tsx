@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useEventContext } from "@/lib/EventContext"
-import { QrCode } from "lucide-react"
+import { QrCode, Pencil, X, Check, LogIn, UserX, LayoutList, LayoutGrid } from "lucide-react"
 
 interface Application {
   id: string
@@ -11,8 +11,8 @@ interface Application {
   last_name: string
   date_of_birth: string
   email: string
-  instagram: string
-  intro: string
+  instagram: string | null
+  intro: string | null
   gender: string | null
   heard_about_us: string | null
   status: string
@@ -22,6 +22,13 @@ interface Application {
   qr_token: string | null
   checked_in: boolean | null
   checked_in_at: string | null
+  invite_type: string | null
+  age_flagged: boolean | null
+}
+
+interface EditForm {
+  email: string
+  status: string
 }
 
 export default function DashboardPage() {
@@ -32,6 +39,10 @@ export default function DashboardPage() {
   const [error, setError] = useState("")
   const [searchTerm, setSearchTerm] = useState("")
   const [filterStatus, setFilterStatus] = useState("all")
+  const [viewMode, setViewMode] = useState<"overview" | "detailed">("overview")
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editForm, setEditForm] = useState<EditForm>({ email: "", status: "" })
+  const [checkingInId, setCheckingInId] = useState<string | null>(null)
 
   useEffect(() => {
     if (currentEvent) {
@@ -46,21 +57,13 @@ export default function DashboardPage() {
       const url = eventId
         ? `/api/applications?eventId=${eventId}`
         : "/api/applications"
-      const res = await fetch(url, {
-        method: "GET",
-        credentials: "include"
-      })
+      const res = await fetch(url, { method: "GET", credentials: "include" })
 
-      // If 401 or 403, user is not authenticated
       if (res.status === 401 || res.status === 403) {
-        console.log("Unauthorized access, redirecting to admin")
         router.push("/admin")
         return
       }
-
-      if (!res.ok) {
-        throw new Error("Failed to fetch applications")
-      }
+      if (!res.ok) throw new Error("Failed to fetch applications")
 
       const data = await res.json()
       setApplications(data || [])
@@ -74,7 +77,7 @@ export default function DashboardPage() {
     }
   }
 
-  const updateStatus = async (id: string, action: "approve" | "reject" | "waitlist") => {
+  const updateStatus = async (id: string, action: "approve" | "reject" | "waitlist" | "cancelled") => {
     try {
       const res = await fetch("/api/update-status", {
         method: "POST",
@@ -82,17 +85,8 @@ export default function DashboardPage() {
         body: JSON.stringify({ id, action }),
         credentials: "include"
       })
-
-      if (res.status === 401 || res.status === 403) {
-        router.push("/admin")
-        return
-      }
-
-      if (!res.ok) {
-        throw new Error("Failed to update status")
-      }
-
-      // Refresh applications
+      if (res.status === 401 || res.status === 403) { router.push("/admin"); return }
+      if (!res.ok) throw new Error("Failed to update status")
       fetchApplications(currentEvent?.id)
     } catch (err) {
       console.error(err)
@@ -100,16 +94,63 @@ export default function DashboardPage() {
     }
   }
 
-  // Filter applications
+  const handleManualCheckIn = async (id: string) => {
+    setCheckingInId(id)
+    try {
+      const res = await fetch("/api/manual-checkin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id }),
+        credentials: "include"
+      })
+      if (!res.ok) {
+        const data = await res.json()
+        setError(data.error || "Failed to check in guest")
+        return
+      }
+      fetchApplications(currentEvent?.id)
+    } catch (err) {
+      console.error(err)
+      setError("Error checking in guest")
+    } finally {
+      setCheckingInId(null)
+    }
+  }
+
+  const handleEditSave = async (id: string) => {
+    try {
+      const res = await fetch("/api/edit-application", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, email: editForm.email, status: editForm.status }),
+        credentials: "include"
+      })
+      if (!res.ok) {
+        const data = await res.json()
+        setError(data.error || "Failed to update application")
+        return
+      }
+      setEditingId(null)
+      fetchApplications(currentEvent?.id)
+    } catch (err) {
+      console.error(err)
+      setError("Error updating application")
+    }
+  }
+
+  const startEdit = (app: Application) => {
+    setEditingId(app.id)
+    setEditForm({ email: app.email, status: app.status })
+  }
+
   const filteredApplications = applications.filter((app) => {
+    const q = searchTerm.toLowerCase()
     const matchesSearch =
-      app.first_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      app.last_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      app.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      app.instagram.toLowerCase().includes(searchTerm.toLowerCase())
-
+      app.first_name.toLowerCase().includes(q) ||
+      app.last_name.toLowerCase().includes(q) ||
+      app.email.toLowerCase().includes(q) ||
+      (app.instagram ?? "").toLowerCase().includes(q)
     const matchesFilter = filterStatus === "all" || app.status === filterStatus
-
     return matchesSearch && matchesFilter
   })
 
@@ -117,48 +158,42 @@ export default function DashboardPage() {
     const today = new Date()
     const birthDate = new Date(dateOfBirth)
     let age = today.getFullYear() - birthDate.getFullYear()
-    const monthDiff = today.getMonth() - birthDate.getMonth()
-
-    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-      age--
-    }
-
+    const m = today.getMonth() - birthDate.getMonth()
+    if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) age--
     return age
   }
 
-  const getStatusColor = (status: string) => {
+  const getStatusBadge = (status: string) => {
     switch (status) {
-      case "approved":
-        return "text-emerald-400"
-      case "rejected":
-        return "text-red-400"
-      case "waitlist":
-        return "text-yellow-400"
-      case "applied":
-        return "text-neutral-400"
-      default:
-        return "text-neutral-400"
+      case "approved": return "bg-emerald-400/10 text-emerald-400 border-emerald-400/30"
+      case "rejected": return "bg-red-400/10 text-red-400 border-red-400/30"
+      case "waitlist": return "bg-yellow-400/10 text-yellow-400 border-yellow-400/30"
+      case "cancelled": return "bg-neutral-800 text-neutral-500 border-neutral-700"
+      case "applied": return "bg-cyan-400/10 text-cyan-400 border-cyan-400/30"
+      default: return "bg-neutral-800 text-neutral-400 border-neutral-700"
     }
   }
 
-  // If not authenticated, show loading screen
+  const getInviteTypeBadge = (type: string | null) => {
+    if (!type) return null
+    switch (type) {
+      case "vip": return { label: "💎 VIP", cls: "text-purple-400 border-purple-400/30 bg-purple-400/10" }
+      case "friend": return { label: "🤝 Friend", cls: "text-orange-400 border-orange-400/30 bg-orange-400/10" }
+      case "guestlist": return { label: "📋 Guestlist", cls: "text-cyan-400 border-cyan-400/30 bg-cyan-400/10" }
+      case "instagram": return { label: "📸 Instagram", cls: "text-pink-400 border-pink-400/30 bg-pink-400/10" }
+      case "whatsapp": return { label: "💬 WhatsApp", cls: "text-green-400 border-green-400/30 bg-green-400/10" }
+      default: return { label: type, cls: "text-neutral-400 border-neutral-700 bg-neutral-800" }
+    }
+  }
+
   if (eventsLoading || isLoading) {
     return (
       <div className="min-h-screen bg-black text-white overflow-hidden">
         <div className="fixed inset-0 z-0">
           <div className="absolute inset-0 bg-gradient-to-br from-neutral-900 via-black to-black" />
-          <div className="absolute top-0 left-1/4 w-96 h-96 bg-white/10 rounded-full blur-3xl opacity-20 animate-pulse" />
-          <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-white/5 rounded-full blur-3xl opacity-20 animate-pulse" />
         </div>
-
         <div className="relative z-10 min-h-screen flex items-center justify-center">
-          <div className="text-center space-y-4">
-            <div className="animate-pulse">
-              <p className="text-lg tracking-[0.2em] uppercase text-neutral-400">
-                Loading applications
-              </p>
-            </div>
-          </div>
+          <p className="text-lg tracking-[0.2em] uppercase text-neutral-400 animate-pulse">Loading applications</p>
         </div>
       </div>
     )
@@ -166,44 +201,34 @@ export default function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-black text-white">
-      {/* Animated gradient background */}
       <div className="fixed inset-0 z-0">
         <div className="absolute inset-0 bg-gradient-to-br from-neutral-900 via-black to-black" />
         <div className="absolute top-0 left-1/4 w-96 h-96 bg-white/10 rounded-full blur-3xl opacity-20 animate-pulse" />
         <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-white/5 rounded-full blur-3xl opacity-20 animate-pulse" />
       </div>
 
-      {/* Content */}
       <div className="relative z-10">
-        {/* Top Header */}
-        <div className="flex justify-between items-center px-6 md:px-16 py-12 border-b border-neutral-800">
-          <div className="space-y-1">
-            <h1 className="text-3xl md:text-4xl font-light tracking-tight">
+        <div className="px-6 md:px-16 py-12">
+          {/* Header — consistent with analytics style */}
+          <div className="mb-12 space-y-4">
+            <h1 className="text-5xl md:text-6xl font-light tracking-tight">
               <span className="bg-gradient-to-b from-white via-white to-neutral-500 bg-clip-text text-transparent">
                 Applications
               </span>
             </h1>
-            <p className="text-neutral-400 text-sm tracking-[0.2em] uppercase font-light mt-2">
-              {currentEvent?.name} - {currentEvent ? new Date(currentEvent.date).toLocaleDateString() : ""}
+            <p className="text-neutral-400 text-sm tracking-[0.2em] uppercase font-light">
+              {currentEvent?.name} — {currentEvent ? new Date(currentEvent.date).toLocaleDateString() : ""}
             </p>
+            <div className="h-px bg-gradient-to-r from-white/40 to-transparent w-20" />
           </div>
-          <div className="text-right">
-            <p className="text-xs tracking-[0.3em] uppercase text-neutral-500 font-light">
-              {applications.length} Total
-            </p>
-          </div>
-        </div>
 
-        {/* Main Content */}
-        <div className="px-6 md:px-16 py-12">
-          {/* Error Message */}
           {error && (
             <div className="mb-8 text-sm tracking-[0.15em] py-3 px-4 border border-red-400/30 text-red-400 bg-red-400/5">
               {error}
             </div>
           )}
 
-          {/* Search and Filter Controls */}
+          {/* Controls */}
           <div className="mb-8 space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <input
@@ -213,7 +238,6 @@ export default function DashboardPage() {
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="col-span-1 md:col-span-2 bg-transparent border-b border-neutral-800 px-0 py-3 text-white placeholder-neutral-600 focus:outline-none focus:border-neutral-600 transition-all duration-300 text-sm"
               />
-
               <select
                 value={filterStatus}
                 onChange={(e) => setFilterStatus(e.target.value)}
@@ -224,189 +248,231 @@ export default function DashboardPage() {
                 <option value="approved" className="bg-black">Approved</option>
                 <option value="rejected" className="bg-black">Rejected</option>
                 <option value="waitlist" className="bg-black">Waitlist</option>
+                <option value="cancelled" className="bg-black">Cancelled</option>
               </select>
+            </div>
+            <div className="flex items-center gap-4">
+              <button
+                onClick={() => fetchApplications(currentEvent?.id)}
+                className="px-4 py-2 bg-neutral-900 border border-neutral-800 text-neutral-300 hover:text-white hover:border-neutral-600 transition-all duration-300 text-xs tracking-[0.2em] uppercase rounded"
+              >
+                Refresh
+              </button>
+              <div className="flex items-center border border-neutral-800 rounded overflow-hidden">
+                <button
+                  onClick={() => setViewMode("overview")}
+                  className={`p-2 transition-all duration-200 ${viewMode === "overview" ? "bg-neutral-800 text-white" : "text-neutral-500 hover:text-white"}`}
+                  title="Overview"
+                >
+                  <LayoutList size={14} />
+                </button>
+                <button
+                  onClick={() => setViewMode("detailed")}
+                  className={`p-2 transition-all duration-200 ${viewMode === "detailed" ? "bg-neutral-800 text-white" : "text-neutral-500 hover:text-white"}`}
+                  title="Detailed"
+                >
+                  <LayoutGrid size={14} />
+                </button>
+              </div>
+              <p className="text-xs tracking-[0.2em] uppercase text-neutral-600">
+                {filteredApplications.length} / {applications.length} guests
+              </p>
             </div>
           </div>
 
-          {/* Refresh Button */}
-          <button
-            onClick={() => fetchApplications(currentEvent?.id)}
-            className="mb-8 px-4 py-2 bg-neutral-900 border border-neutral-800 text-neutral-300 hover:text-white hover:border-neutral-600 transition-all duration-300 text-xs tracking-[0.2em] uppercase rounded"
-          >
-            Refresh
-          </button>
-
-          {/* Applications List */}
-          <div className="space-y-4">
+          {/* Applications */}
+          <div className="space-y-1">
             {filteredApplications.length === 0 ? (
               <div className="text-center py-12">
                 <p className="text-neutral-500 text-sm tracking-[0.15em] uppercase">
-                  {searchTerm || filterStatus !== "all" 
-                    ? "No applications found" 
-                    : "No applications yet"}
+                  {searchTerm || filterStatus !== "all" ? "No applications found" : "No applications yet"}
                 </p>
               </div>
             ) : (
-              filteredApplications.map((app) => (
-                <div
-                  key={app.id}
-                  className="border border-neutral-800 hover:border-neutral-700 p-6 transition-all duration-300 group"
-                >
-                  <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mb-6">
-                    <div>
-                      <p className="text-xs tracking-[0.2em] uppercase text-neutral-500 mb-2">
-                        Name
-                      </p>
-                      <p className="text-white font-light">
-                        {app.first_name} {app.last_name}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-xs tracking-[0.2em] uppercase text-neutral-500 mb-2">
-                        Age / Email
-                      </p>
-                      <p className="text-white font-light text-sm mb-1">
-                        {calculateAge(app.date_of_birth)} years old
-                      </p>
-                      <a
-                        href={`mailto:${app.email}`}
-                        className="text-blue-400 hover:text-blue-300 font-light text-sm break-all transition-colors duration-300"
-                      >
-                        {app.email}
-                      </a>
-                    </div>
-                    <div>
-                      <p className="text-xs tracking-[0.2em] uppercase text-neutral-500 mb-2">
-                        Instagram
-                      </p>
-                      {app.instagram ? (
-                        <a
-                          href={`https://instagram.com/${app.instagram.replace("@", "")}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-blue-400 hover:text-blue-300 font-light text-sm transition-colors duration-300"
-                        >
-                          {app.instagram}
-                        </a>
-                      ) : (
-                        <p className="text-neutral-600 font-light text-sm">-</p>
-                      )}
-                    </div>
-                    <div>
-                      <p className="text-xs tracking-[0.2em] uppercase text-neutral-500 mb-2">
-                        Status
-                      </p>
-                      <p
-                        className={`font-light text-sm tracking-[0.15em] uppercase ${getStatusColor(
-                          app.status
-                        )}`}
-                      >
-                        {app.status}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-xs tracking-[0.2em] uppercase text-neutral-500 mb-2">
-                        Applied
-                      </p>
-                      <p className="text-white font-light text-sm">
-                        {new Date(app.created_at).toLocaleDateString()}
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* About Section */}
-                  {app.intro && (
-                    <div className="mb-6 pb-6 border-b border-neutral-800">
-                      <p className="text-xs tracking-[0.2em] uppercase text-neutral-500 mb-2">
-                        About
-                      </p>
-                      <p className="text-neutral-300 font-light text-sm italic">
-                        {app.intro}
-                      </p>
-                    </div>
-                  )}
-
-                  {/* Additional Info */}
-                  {(app.gender || app.heard_about_us) && (
-                    <div className="mb-6 pb-6 border-b border-neutral-800 grid grid-cols-2 gap-4">
-                      {app.gender && (
-                        <div>
-                          <p className="text-xs tracking-[0.2em] uppercase text-neutral-500 mb-1">Gender</p>
-                          <p className="text-neutral-300 font-light text-sm capitalize">{app.gender}</p>
-                        </div>
-                      )}
-                      {app.heard_about_us && (
-                        <div>
-                          <p className="text-xs tracking-[0.2em] uppercase text-neutral-500 mb-1">Heard via</p>
-                          <p className="text-neutral-300 font-light text-sm capitalize">{app.heard_about_us.replace("_", " ")}</p>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {/* QR Code for approved guests */}
-                  {app.status === "approved" && app.qr_token && (
-                    <div className="mb-6 pb-6 border-b border-neutral-800">
-                      <p className="text-xs tracking-[0.2em] uppercase text-neutral-500 mb-3">
-                        Ticket QR Code
-                        {app.checked_in && <span className="ml-2 text-yellow-400">— Checked In ✓</span>}
-                      </p>
-                      <div className="flex items-center gap-4">
-                        <a
-                          href={`/ticket/${app.qr_token}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="flex items-center gap-2 px-4 py-2 text-xs tracking-[0.2em] uppercase text-emerald-400 border border-emerald-400/30 hover:border-emerald-400 hover:bg-emerald-400/5 transition-all duration-300 rounded"
-                        >
-                          <QrCode size={14} />
-                          View Ticket
-                        </a>
-                        {app.checked_in_at && (
-                          <p className="text-neutral-600 text-xs">
-                            Checked in: {new Date(app.checked_in_at).toLocaleString()}
-                          </p>
+              filteredApplications.map((app) => {
+                const badge = getInviteTypeBadge(app.invite_type)
+                return (
+                  <div
+                    key={app.id}
+                    className={`border transition-all duration-300 ${
+                      app.age_flagged
+                        ? "border-orange-800/60 hover:border-orange-700/60"
+                        : "border-neutral-800 hover:border-neutral-700"
+                    }`}
+                  >
+                    {/* Compact Row */}
+                    <div className={`px-4 py-3 ${viewMode === "detailed" ? "border-b border-neutral-800/50" : ""}`}>
+                      <div className="flex items-center gap-3 flex-wrap">
+                        {badge && (
+                          <span className={`text-[10px] px-2 py-0.5 rounded border tracking-[0.1em] font-mono ${badge.cls}`}>
+                            {badge.label}
+                          </span>
                         )}
+                        {app.age_flagged && (
+                          <span className="text-[10px] px-2 py-0.5 rounded border text-orange-400 border-orange-400/30 bg-orange-400/10">
+                            ⚠ Age
+                          </span>
+                        )}
+
+                        <span className="text-white font-light text-sm min-w-[140px]">
+                          {app.first_name} {app.last_name}
+                        </span>
+                        <span className="text-neutral-500 text-xs w-8 text-center">{calculateAge(app.date_of_birth)}y</span>
+                        <span className="text-neutral-500 text-xs capitalize min-w-[55px]">{app.gender || "—"}</span>
+                        <a href={`mailto:${app.email}`} className="text-neutral-400 hover:text-blue-400 text-xs transition-colors flex-1 min-w-[150px] truncate">
+                          {app.email}
+                        </a>
+                        <span className={`text-[10px] px-2 py-0.5 rounded border tracking-[0.15em] uppercase font-light whitespace-nowrap ${getStatusBadge(app.status)}`}>
+                          {app.status}{app.checked_in ? " ✓" : ""}
+                        </span>
+                        <span className="text-neutral-600 text-xs hidden md:block">{new Date(app.created_at).toLocaleDateString()}</span>
+
+                        {/* Action icons */}
+                        <div className="flex items-center gap-1 ml-auto">
+                          {app.status === "approved" && !app.checked_in && (
+                            <button
+                              onClick={() => handleManualCheckIn(app.id)}
+                              disabled={checkingInId === app.id}
+                              title="Manual Check-in"
+                              className="p-1.5 text-emerald-500 hover:text-emerald-400 hover:bg-emerald-400/10 rounded transition-all duration-200 disabled:opacity-50"
+                            >
+                              <LogIn size={14} />
+                            </button>
+                          )}
+                          <button
+                            onClick={() => editingId === app.id ? setEditingId(null) : startEdit(app)}
+                            title="Edit"
+                            className="p-1.5 text-neutral-500 hover:text-white hover:bg-neutral-800 rounded transition-all"
+                          >
+                            <Pencil size={14} />
+                          </button>
+                          {app.status !== "cancelled" && app.status !== "rejected" && (
+                            <button
+                              onClick={() => {
+                                if (confirm("Mark this guest as cancelled? (They won't be flagged as a no-show)")) {
+                                  updateStatus(app.id, "cancelled")
+                                }
+                              }}
+                              title="Mark Cancelled"
+                              className="p-1.5 text-neutral-500 hover:text-orange-400 hover:bg-orange-400/10 rounded transition-all"
+                            >
+                              <UserX size={14} />
+                            </button>
+                          )}
+                        </div>
                       </div>
                     </div>
-                  )}
 
-                  {/* Action Buttons */}
-                  {app.status === "applied" && (
-                    <div className="border-t border-neutral-800 pt-4 flex gap-3">
-                      <button
-                        onClick={() => updateStatus(app.id, "approve")}
-                        className="flex-1 group/btn relative px-4 py-2 text-xs tracking-[0.2em] uppercase text-emerald-400 border border-emerald-400/30 hover:border-emerald-400 hover:bg-emerald-400/5 transition-all duration-300"
-                      >
-                        <span className="font-light">Approve</span>
-                      </button>
-                      <button
-                        onClick={() => updateStatus(app.id, "waitlist")}
-                        className="flex-1 group/btn relative px-4 py-2 text-xs tracking-[0.2em] uppercase text-yellow-400 border border-yellow-400/30 hover:border-yellow-400 hover:bg-yellow-400/5 transition-all duration-300"
-                      >
-                        <span className="font-light">Waitlist</span>
-                      </button>
-                      <button
-                        onClick={() => updateStatus(app.id, "reject")}
-                        className="flex-1 group/btn relative px-4 py-2 text-xs tracking-[0.2em] uppercase text-red-400 border border-red-400/30 hover:border-red-400 hover:bg-red-400/5 transition-all duration-300"
-                      >
-                        <span className="font-light">Reject</span>
-                      </button>
-                    </div>
-                  )}
-                </div>
-              ))
+                    {/* Edit form */}
+                    {editingId === app.id && (
+                      <div className="px-4 py-3 bg-neutral-900/50 border-b border-neutral-800">
+                        <p className="text-xs tracking-[0.2em] uppercase text-neutral-500 mb-3">Edit Application</p>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          <div>
+                            <label className="text-[10px] tracking-[0.2em] uppercase text-neutral-600 mb-1 block">Email</label>
+                            <input
+                              type="email"
+                              value={editForm.email}
+                              onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
+                              className="w-full bg-transparent border-b border-neutral-700 py-2 text-white text-sm focus:outline-none focus:border-neutral-500"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-[10px] tracking-[0.2em] uppercase text-neutral-600 mb-1 block">Status</label>
+                            <select
+                              value={editForm.status}
+                              onChange={(e) => setEditForm({ ...editForm, status: e.target.value })}
+                              className="w-full bg-neutral-900 border-b border-neutral-700 py-2 text-white text-sm focus:outline-none"
+                            >
+                              <option value="applied" className="bg-black">Applied</option>
+                              <option value="approved" className="bg-black">Approved</option>
+                              <option value="rejected" className="bg-black">Rejected</option>
+                              <option value="waitlist" className="bg-black">Waitlist</option>
+                              <option value="cancelled" className="bg-black">Cancelled</option>
+                            </select>
+                          </div>
+                          <div className="flex items-end gap-2">
+                            <button
+                              onClick={() => handleEditSave(app.id)}
+                              className="flex items-center gap-1 px-3 py-2 text-xs tracking-[0.1em] uppercase text-emerald-400 border border-emerald-400/30 hover:border-emerald-400 hover:bg-emerald-400/5 transition-all rounded"
+                            >
+                              <Check size={12} /> Save
+                            </button>
+                            <button
+                              onClick={() => setEditingId(null)}
+                              className="flex items-center gap-1 px-3 py-2 text-xs tracking-[0.1em] uppercase text-neutral-400 border border-neutral-700 hover:border-neutral-500 transition-all rounded"
+                            >
+                              <X size={12} /> Cancel
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Detailed view */}
+                    {viewMode === "detailed" && (
+                      <div className="px-4 py-4">
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-3">
+                          <div>
+                            <p className="text-[10px] tracking-[0.2em] uppercase text-neutral-600 mb-1">Instagram</p>
+                            {app.instagram ? (
+                              <a href={`https://instagram.com/${app.instagram.replace("@","")}`} target="_blank" rel="noopener noreferrer"
+                                className="text-blue-400 hover:text-blue-300 text-sm">
+                                {app.instagram}
+                              </a>
+                            ) : <p className="text-neutral-600 text-sm">—</p>}
+                          </div>
+                          <div>
+                            <p className="text-[10px] tracking-[0.2em] uppercase text-neutral-600 mb-1">Heard via</p>
+                            <p className="text-neutral-300 text-sm capitalize">{app.heard_about_us?.replace("_"," ") || "—"}</p>
+                          </div>
+                          {app.checked_in_at && (
+                            <div>
+                              <p className="text-[10px] tracking-[0.2em] uppercase text-neutral-600 mb-1">Checked In</p>
+                              <p className="text-emerald-400 text-sm">{new Date(app.checked_in_at).toLocaleString()}</p>
+                            </div>
+                          )}
+                          {app.qr_token && (
+                            <div>
+                              <p className="text-[10px] tracking-[0.2em] uppercase text-neutral-600 mb-1">Ticket</p>
+                              <a href={`/ticket/${app.qr_token}`} target="_blank" rel="noopener noreferrer"
+                                className="flex items-center gap-1 text-xs text-emerald-400 hover:text-emerald-300">
+                                <QrCode size={12} /> View QR
+                              </a>
+                            </div>
+                          )}
+                        </div>
+                        {app.intro && (
+                          <p className="text-neutral-500 text-sm italic mb-3">&quot;{app.intro}&quot;</p>
+                        )}
+                        {app.status === "applied" && (
+                          <div className="pt-3 border-t border-neutral-800/50 flex gap-2">
+                            <button onClick={() => updateStatus(app.id, "approve")} className="px-3 py-1.5 text-xs tracking-[0.15em] uppercase text-emerald-400 border border-emerald-400/30 hover:border-emerald-400 hover:bg-emerald-400/5 transition-all rounded">Approve</button>
+                            <button onClick={() => updateStatus(app.id, "waitlist")} className="px-3 py-1.5 text-xs tracking-[0.15em] uppercase text-yellow-400 border border-yellow-400/30 hover:border-yellow-400 hover:bg-yellow-400/5 transition-all rounded">Waitlist</button>
+                            <button onClick={() => updateStatus(app.id, "reject")} className="px-3 py-1.5 text-xs tracking-[0.15em] uppercase text-red-400 border border-red-400/30 hover:border-red-400 hover:bg-red-400/5 transition-all rounded">Reject</button>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Overview quick actions for applied */}
+                    {viewMode === "overview" && app.status === "applied" && (
+                      <div className="px-4 py-2 border-t border-neutral-800/30 flex gap-2">
+                        <button onClick={() => updateStatus(app.id, "approve")} className="px-3 py-1 text-[10px] tracking-[0.1em] uppercase text-emerald-400 border border-emerald-400/20 hover:border-emerald-400 hover:bg-emerald-400/5 transition-all rounded">Approve</button>
+                        <button onClick={() => updateStatus(app.id, "waitlist")} className="px-3 py-1 text-[10px] tracking-[0.1em] uppercase text-yellow-400 border border-yellow-400/20 hover:border-yellow-400 hover:bg-yellow-400/5 transition-all rounded">Waitlist</button>
+                        <button onClick={() => updateStatus(app.id, "reject")} className="px-3 py-1 text-[10px] tracking-[0.1em] uppercase text-red-400 border border-red-400/20 hover:border-red-400 hover:bg-red-400/5 transition-all rounded">Reject</button>
+                      </div>
+                    )}
+                  </div>
+                )
+              })
             )}
           </div>
         </div>
 
-        {/* Footer */}
         <div className="flex justify-between items-center px-6 md:px-16 py-12 border-t border-neutral-800">
-          <div className="text-[10px] tracking-[0.3em] uppercase text-neutral-700 font-light">
-            Applications
-          </div>
-          <div className="text-[10px] tracking-[0.3em] uppercase text-neutral-700 font-light">
-            © 2026
-          </div>
+          <div className="text-[10px] tracking-[0.3em] uppercase text-neutral-700 font-light">Applications</div>
+          <div className="text-[10px] tracking-[0.3em] uppercase text-neutral-700 font-light">© 2026</div>
         </div>
       </div>
     </div>

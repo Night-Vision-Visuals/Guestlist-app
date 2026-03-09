@@ -60,6 +60,33 @@ export async function GET(req: Request) {
     const rejected = applications?.filter((app: any) => app.status === "rejected").length || 0
     const waitlist = applications?.filter((app: any) => app.status === "waitlist").length || 0
     const pending = applications?.filter((app: any) => app.status === "applied").length || 0
+    const cancelled = applications?.filter((app: any) => app.status === "cancelled").length || 0
+    const checkedIn = applications?.filter((app: any) => app.checked_in).length || 0
+
+    // Gender statistics
+    const male = applications?.filter((app: any) => app.gender === "male").length || 0
+    const female = applications?.filter((app: any) => app.gender === "female").length || 0
+    const diverse = applications?.filter((app: any) => app.gender === "diverse").length || 0
+
+    // Average age calculation
+    const calculateAge = (dob: string) => {
+      const today = new Date()
+      const birth = new Date(dob)
+      let age = today.getFullYear() - birth.getFullYear()
+      const m = today.getMonth() - birth.getMonth()
+      if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--
+      return age
+    }
+    const ages = applications?.filter((app: any) => app.date_of_birth).map((app: any) => calculateAge(app.date_of_birth)) || []
+    const averageAge = ages.length > 0 ? Math.round(ages.reduce((a: number, b: number) => a + b, 0) / ages.length) : 0
+
+    // Heard about us distribution
+    const heardAboutUs: { [key: string]: number } = {}
+    applications?.forEach((app: any) => {
+      if (app.heard_about_us) {
+        heardAboutUs[app.heard_about_us] = (heardAboutUs[app.heard_about_us] || 0) + 1
+      }
+    })
 
     // Fetch invitation code stats
     const { data: inviteCodes, error: inviteError } = await supabase
@@ -89,8 +116,20 @@ export async function GET(req: Request) {
         rejected,
         waitlist,
         pending,
+        cancelled,
+        checkedIn,
         approvalRate: totalApplications > 0 ? Math.round((approved / totalApplications) * 100) : 0
       },
+      genderStats: {
+        male,
+        female,
+        diverse,
+        malePercent: totalApplications > 0 ? Math.round((male / totalApplications) * 100) : 0,
+        femalePercent: totalApplications > 0 ? Math.round((female / totalApplications) * 100) : 0,
+        diversePercent: totalApplications > 0 ? Math.round((diverse / totalApplications) * 100) : 0,
+        averageAge
+      },
+      heardAboutUs,
       inviteStats: {
         totalCodes: totalInviteCodes,
         totalGenerated: totalInvitesGenerated,

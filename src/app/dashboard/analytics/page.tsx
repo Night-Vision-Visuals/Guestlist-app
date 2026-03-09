@@ -17,8 +17,20 @@ interface Analytics {
     rejected: number
     waitlist: number
     pending: number
+    cancelled: number
+    checkedIn: number
     approvalRate: number
   }
+  genderStats: {
+    male: number
+    female: number
+    diverse: number
+    malePercent: number
+    femalePercent: number
+    diversePercent: number
+    averageAge: number
+  }
+  heardAboutUs: { [key: string]: number }
   inviteStats: {
     totalCodes: number
     totalGenerated: number
@@ -204,6 +216,90 @@ export default function AnalyticsPage() {
                   </div>
                 </div>
               </div>
+
+              {/* Checked In & Cancelled */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="border border-neutral-800 p-6 rounded-lg hover:border-neutral-700 transition-all duration-300">
+                  <p className="text-xs tracking-[0.2em] uppercase text-neutral-500 mb-3">Checked In</p>
+                  <p className="text-4xl font-light text-cyan-400 mb-2">{analytics.statistics.checkedIn}</p>
+                  <p className="text-xs text-neutral-600">of {analytics.statistics.approved} approved</p>
+                </div>
+                <div className="border border-neutral-800 p-6 rounded-lg hover:border-neutral-700 transition-all duration-300">
+                  <p className="text-xs tracking-[0.2em] uppercase text-neutral-500 mb-3">Cancelled</p>
+                  <p className="text-4xl font-light text-neutral-500 mb-2">{analytics.statistics.cancelled}</p>
+                  <p className="text-xs text-neutral-600">self-reported</p>
+                </div>
+                <div className="border border-neutral-800 p-6 rounded-lg hover:border-neutral-700 transition-all duration-300">
+                  <p className="text-xs tracking-[0.2em] uppercase text-neutral-500 mb-3">Show Rate</p>
+                  <p className="text-4xl font-light text-emerald-400 mb-2">
+                    {analytics.statistics.approved > 0
+                      ? Math.round((analytics.statistics.checkedIn / analytics.statistics.approved) * 100)
+                      : 0}%
+                  </p>
+                  <p className="text-xs text-neutral-600">of approved guests</p>
+                </div>
+              </div>
+
+              {/* Gender & Age Statistics */}
+              <div className="border border-neutral-800 p-8 rounded-lg">
+                <h3 className="text-xl font-light mb-6">Demographics</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  <div className="space-y-4">
+                    <h4 className="text-sm tracking-[0.15em] uppercase text-neutral-500">Gender Distribution</h4>
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-4">
+                        <p className="text-sm text-neutral-400 w-20">Male</p>
+                        <div className="flex-1 h-2 bg-neutral-800 rounded-full overflow-hidden">
+                          <div className="h-full bg-blue-500" style={{ width: `${analytics.genderStats.malePercent}%` }} />
+                        </div>
+                        <p className="text-sm text-white w-16 text-right">{analytics.genderStats.male} ({analytics.genderStats.malePercent}%)</p>
+                      </div>
+                      <div className="flex items-center gap-4">
+                        <p className="text-sm text-neutral-400 w-20">Female</p>
+                        <div className="flex-1 h-2 bg-neutral-800 rounded-full overflow-hidden">
+                          <div className="h-full bg-pink-500" style={{ width: `${analytics.genderStats.femalePercent}%` }} />
+                        </div>
+                        <p className="text-sm text-white w-16 text-right">{analytics.genderStats.female} ({analytics.genderStats.femalePercent}%)</p>
+                      </div>
+                      <div className="flex items-center gap-4">
+                        <p className="text-sm text-neutral-400 w-20">Diverse</p>
+                        <div className="flex-1 h-2 bg-neutral-800 rounded-full overflow-hidden">
+                          <div className="h-full bg-purple-500" style={{ width: `${analytics.genderStats.diversePercent}%` }} />
+                        </div>
+                        <p className="text-sm text-white w-16 text-right">{analytics.genderStats.diverse} ({analytics.genderStats.diversePercent}%)</p>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex flex-col justify-center items-center">
+                    <p className="text-xs tracking-[0.2em] uppercase text-neutral-500 mb-3">Average Age</p>
+                    <p className="text-6xl font-light text-white">{analytics.genderStats.averageAge}</p>
+                    <p className="text-xs text-neutral-600 mt-2">years old</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Heard About Us */}
+              {Object.keys(analytics.heardAboutUs).length > 0 && (
+                <div className="border border-neutral-800 p-8 rounded-lg">
+                  <h3 className="text-xl font-light mb-6">How did they hear about us?</h3>
+                  <div className="space-y-3">
+                    {Object.entries(analytics.heardAboutUs)
+                      .sort((a, b) => b[1] - a[1])
+                      .map(([source, count]) => (
+                        <div key={source} className="flex items-center gap-4">
+                          <p className="text-sm text-neutral-400 min-w-[140px] capitalize">{source.replace("_", " ")}</p>
+                          <div className="flex-1 h-2 bg-neutral-800 rounded-full overflow-hidden">
+                            <div 
+                              className="h-full bg-gradient-to-r from-cyan-600 to-cyan-400"
+                              style={{ width: `${(count / analytics.statistics.total) * 100}%` }}
+                            />
+                          </div>
+                          <p className="text-sm text-white min-w-[60px] text-right">{count} ({Math.round((count / analytics.statistics.total) * 100)}%)</p>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              )}
 
               {/* Approval Rate */}
               <div className="border border-neutral-800 p-8 rounded-lg">

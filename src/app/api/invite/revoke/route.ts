@@ -30,11 +30,11 @@ export async function POST(req: Request) {
 
     console.log("Revoking invitation:", id)
 
-    // Check if revoked_at column exists, if not don't try to set it
     const { error } = await supabase
       .from("invite_codes")
       .update({ 
-        redeemed: true
+        redeemed: true,
+        revoked_at: new Date().toISOString()
       })
       .eq("id", id)
 

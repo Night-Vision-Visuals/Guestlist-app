@@ -2,7 +2,6 @@
 
 import Link from "next/link"
 import { ArrowRight, Music, Zap, Users } from "lucide-react"
-import Image from "next/image"
 import { useEffect, useRef } from "react"
 
 export default function LandingPage() {
@@ -53,7 +52,7 @@ export default function LandingPage() {
       ctx.fillRect(0, 0, canvas.width, canvas.height)
 
       // Draw grid
-      ctx.strokeStyle = "rgba(16, 185, 129, 0.05)"
+      ctx.strokeStyle = "rgba(6, 182, 212, 0.05)"
       ctx.lineWidth = 1
 
       for (let x = 0; x < canvas.width; x += gridSize) {
@@ -88,14 +87,14 @@ export default function LandingPage() {
         particle.alpha = Math.max(0.1, Math.min(0.5, particle.alpha))
 
         // Draw particle
-        ctx.fillStyle = `rgba(16, 185, 129, ${particle.alpha})`
+        ctx.fillStyle = `rgba(6, 182, 212, ${particle.alpha})`
         ctx.beginPath()
         ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2)
         ctx.fill()
       })
 
       // Draw connecting lines
-      ctx.strokeStyle = "rgba(16, 185, 129, 0.1)"
+      ctx.strokeStyle = "rgba(6, 182, 212, 0.1)"
       ctx.lineWidth = 1
       for (let i = 0; i < particles.length; i++) {
         for (let j = i + 1; j < particles.length; j++) {
@@ -143,13 +142,7 @@ export default function LandingPage() {
         {/* Navigation */}
         <nav className="flex justify-between items-center px-6 md:px-16 py-8 border-b border-neutral-800/50">
           <div className="flex items-center gap-3">
-            <Image
-              src="/logo.png"
-              alt="Night Vision"
-              width={32}
-              height={32}
-              className="h-8 w-8 object-contain"
-            />
+            <span className="text-sm tracking-[0.3em] uppercase text-white font-light">Night Vision</span>
             <div className="h-px w-12 bg-gradient-to-r from-white to-transparent" />
           </div>
 
@@ -175,20 +168,18 @@ export default function LandingPage() {
         <div className="min-h-screen flex flex-col justify-center items-center px-6 md:px-16 py-20 text-center">
           {/* Main Heading */}
           <div className="space-y-6 mb-12">
-            <Image
-              src="/logo.png"
-              alt="Night Vision"
-              width={500}
-              height={500}
-              className="h-100 w-100 object-contain mx-auto mb-6"
-            />
+            <h1 className="text-6xl md:text-8xl font-light tracking-tight">
+              <span className="bg-gradient-to-b from-white via-white to-neutral-500 bg-clip-text text-transparent">
+                NIGHT VISION
+              </span>
+            </h1>
             <p className="text-neutral-400 text-lg tracking-[0.2em] uppercase font-light max-w-2xl mx-auto">
               Curated Events. Seamless Experience. Exclusive Access.
             </p>
           </div>
 
           {/* Divider */}
-          <div className="w-20 h-px bg-gradient-to-r from-transparent via-emerald-400 to-transparent mb-12" />
+          <div className="w-20 h-px bg-gradient-to-r from-transparent via-cyan-400 to-transparent mb-12" />
 
           
 
@@ -196,7 +187,7 @@ export default function LandingPage() {
           <div className="flex flex-col md:flex-row gap-6 mb-20">
             <Link
               href="/login"
-              className="group relative px-8 md:px-12 py-4 bg-emerald-600 hover:bg-emerald-500 text-white font-light tracking-[0.2em] uppercase text-sm rounded-lg transition-all duration-300 flex items-center justify-center gap-3"
+              className="group relative px-8 md:px-12 py-4 bg-cyan-600 hover:bg-cyan-500 text-white font-light tracking-[0.2em] uppercase text-sm rounded-lg transition-all duration-300 flex items-center justify-center gap-3"
             >
               Access Now
               <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform duration-300" />
@@ -205,7 +196,7 @@ export default function LandingPage() {
               href="https://instagram.com/nightvision_raw"
               target="_blank"
               rel="noopener noreferrer"
-              className="group relative px-8 md:px-12 py-4 border-2 border-emerald-400 text-emerald-400 font-light tracking-[0.2em] uppercase text-sm rounded-lg hover:bg-emerald-400 hover:text-black transition-all duration-300"
+              className="group relative px-8 md:px-12 py-4 border-2 border-cyan-400 text-cyan-400 font-light tracking-[0.2em] uppercase text-sm rounded-lg hover:bg-cyan-400 hover:text-black transition-all duration-300"
             >
               Follow Us
             </Link>
@@ -213,8 +204,8 @@ export default function LandingPage() {
 
           {/* Features Grid */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 w-full max-w-4xl">
-            <div className="group border border-neutral-800 p-8 rounded-lg hover:border-emerald-400/50 hover:bg-emerald-400/5 transition-all duration-300 backdrop-blur-sm">
-              <Users size={24} className="text-emerald-400 mb-4 group-hover:scale-110 transition-transform duration-300" />
+            <div className="group border border-neutral-800 p-8 rounded-lg hover:border-cyan-400/50 hover:bg-cyan-400/5 transition-all duration-300 backdrop-blur-sm">
+              <Users size={24} className="text-cyan-400 mb-4 group-hover:scale-110 transition-transform duration-300" />
               <h3 className="text-lg font-light tracking-[0.15em] uppercase mb-2">
                 Curated
               </h3>
@@ -223,8 +214,8 @@ export default function LandingPage() {
               </p>
             </div>
 
-            <div className="group border border-neutral-800 p-8 rounded-lg hover:border-emerald-400/50 hover:bg-emerald-400/5 transition-all duration-300 backdrop-blur-sm">
-              <Zap size={24} className="text-emerald-400 mb-4 group-hover:scale-110 transition-transform duration-300" />
+            <div className="group border border-neutral-800 p-8 rounded-lg hover:border-cyan-400/50 hover:bg-cyan-400/5 transition-all duration-300 backdrop-blur-sm">
+              <Zap size={24} className="text-cyan-400 mb-4 group-hover:scale-110 transition-transform duration-300" />
               <h3 className="text-lg font-light tracking-[0.15em] uppercase mb-2">
                 Fast
               </h3>
@@ -233,8 +224,8 @@ export default function LandingPage() {
               </p>
             </div>
 
-            <div className="group border border-neutral-800 p-8 rounded-lg hover:border-emerald-400/50 hover:bg-emerald-400/5 transition-all duration-300 backdrop-blur-sm">
-              <Music size={24} className="text-emerald-400 mb-4 group-hover:scale-110 transition-transform duration-300" />
+            <div className="group border border-neutral-800 p-8 rounded-lg hover:border-cyan-400/50 hover:bg-cyan-400/5 transition-all duration-300 backdrop-blur-sm">
+              <Music size={24} className="text-cyan-400 mb-4 group-hover:scale-110 transition-transform duration-300" />
               <h3 className="text-lg font-light tracking-[0.15em] uppercase mb-2">
                 Experience
               </h3>
@@ -296,7 +287,7 @@ export default function LandingPage() {
                 href="https://instagram.com/nightvision_raw"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-neutral-600 hover:text-emerald-400 text-sm font-light transition-colors duration-300"
+                className="text-neutral-600 hover:text-cyan-400 text-sm font-light transition-colors duration-300"
               >
                 @nightvision_raw
               </a>

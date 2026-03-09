@@ -19,6 +19,7 @@ interface Invitation {
   created_at: string
   created_by_admin_id: string
   event_id: string | null
+  invite_type: string | null
   admin: Admin | null
 }
 
@@ -34,7 +35,8 @@ export default function InvitesPage() {
   const [generatedCode, setGeneratedCode] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
   const [formData, setFormData] = useState({
-    max_uses: 1
+    max_uses: 1,
+    invite_type: "guestlist"
   })
 
   useEffect(() => {
@@ -86,6 +88,7 @@ export default function InvitesPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           max_uses: parseInt(formData.max_uses.toString()),
+          invite_type: formData.invite_type,
           event_id: currentEvent?.id || null
         }),
         credentials: "include"
@@ -98,7 +101,7 @@ export default function InvitesPage() {
       }
 
       setGeneratedCode(data.code)
-      setFormData({ max_uses: 1 })
+      setFormData({ max_uses: 1, invite_type: "guestlist" })
       setShowCreateForm(false)
 
       // Copy code to clipboard automatically
@@ -147,6 +150,27 @@ export default function InvitesPage() {
     } catch (err) {
       console.error(err)
       setError(err instanceof Error ? err.message : "Error revoking invitation")
+    }
+  }
+
+  const handleDeleteInvite = async (id: string) => {
+    try {
+      const res = await fetch("/api/invite/delete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id }),
+        credentials: "include"
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to delete invitation")
+      }
+      setSuccess("Invitation code deleted")
+      setError("")
+      fetchInvites(currentEvent?.id)
+    } catch (err) {
+      console.error(err)
+      setError(err instanceof Error ? err.message : "Error deleting invitation")
     }
   }
 
@@ -320,6 +344,24 @@ export default function InvitesPage() {
               <form onSubmit={handleCreateInvite} className="space-y-6">
                 <div>
                   <label className="text-xs tracking-[0.2em] uppercase text-neutral-500 mb-2 block">
+                    Invite Type
+                  </label>
+                  <select
+                    value={formData.invite_type}
+                    onChange={(e) => setFormData({ ...formData, invite_type: e.target.value })}
+                    required
+                    className="w-full bg-transparent border-b border-neutral-800 px-0 py-3 text-white focus:outline-none focus:border-neutral-600 transition-all duration-300 text-sm"
+                  >
+                    <option value="guestlist" className="bg-black">📋 Guestlist</option>
+                    <option value="friend" className="bg-black">🤝 Friend</option>
+                    <option value="vip" className="bg-black">💎 VIP</option>
+                    <option value="instagram" className="bg-black">📸 Instagram</option>
+                    <option value="whatsapp" className="bg-black">💬 WhatsApp</option>
+                    <option value="socialmedia" className="bg-black">🌐 Social Media</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-xs tracking-[0.2em] uppercase text-neutral-500 mb-2 block">
                     Maximum Uses (1-100)
                   </label>
                   <input
@@ -360,49 +402,42 @@ export default function InvitesPage() {
                 >
                   <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mb-4">
                     <div>
-                      <p className="text-xs tracking-[0.2em] uppercase text-neutral-500 mb-2">
-                        Code
-                      </p>
+                      <p className="text-xs tracking-[0.2em] uppercase text-neutral-500 mb-2">Code</p>
                       <p className="text-white font-mono text-sm tracking-[0.2em]">{invite.code_hash}</p>
+                      {invite.invite_type && (
+                        <p className="text-xs text-neutral-500 mt-1 capitalize">{invite.invite_type}</p>
+                      )}
                     </div>
 
                     <div>
-                      <p className="text-xs tracking-[0.2em] uppercase text-neutral-500 mb-2">
-                        Status
-                      </p>
+                      <p className="text-xs tracking-[0.2em] uppercase text-neutral-500 mb-2">Status</p>
                       <p className={`font-light text-sm tracking-[0.15em] uppercase ${getStatusColor(invite)}`}>
                         {getStatusText(invite)}
                       </p>
                     </div>
 
                     <div>
-                      <p className="text-xs tracking-[0.2em] uppercase text-neutral-500 mb-2">
-                        Usage
-                      </p>
+                      <p className="text-xs tracking-[0.2em] uppercase text-neutral-500 mb-2">Usage</p>
                       <p className="text-white font-light">
                         {invite.current_uses} / {invite.max_uses}
                       </p>
                       <div className="w-full bg-neutral-800 rounded-full h-1 mt-2">
                         <div
-                          className="bg-emerald-600 h-1 rounded-full transition-all duration-300"
+                          className="bg-cyan-600 h-1 rounded-full transition-all duration-300"
                           style={{ width: `${getUsagePercentage(invite.current_uses, invite.max_uses)}%` }}
                         />
                       </div>
                     </div>
 
                     <div>
-                      <p className="text-xs tracking-[0.2em] uppercase text-neutral-500 mb-2">
-                        Created By
-                      </p>
+                      <p className="text-xs tracking-[0.2em] uppercase text-neutral-500 mb-2">Created By</p>
                       <p className="text-white font-light text-sm">
                         {invite.admin?.username || "Unknown"}
                       </p>
                     </div>
 
                     <div>
-                      <p className="text-xs tracking-[0.2em] uppercase text-neutral-500 mb-2">
-                        Created
-                      </p>
+                      <p className="text-xs tracking-[0.2em] uppercase text-neutral-500 mb-2">Created</p>
                       <p className="text-white font-light text-sm">
                         {new Date(invite.created_at).toLocaleDateString()}
                       </p>
@@ -410,16 +445,26 @@ export default function InvitesPage() {
                   </div>
 
                   {/* Action Buttons */}
-                  {!invite.revoked_at && !invite.redeemed && (
-                    <div className="border-t border-neutral-800 pt-4 flex gap-3">
+                  <div className="border-t border-neutral-800 pt-4 flex gap-3">
+                    {!invite.revoked_at && !invite.redeemed && (
                       <button
                         onClick={() => handleRevokeInvite(invite.id)}
                         className="px-4 py-2 text-xs tracking-[0.2em] uppercase text-red-400 border border-red-400/30 hover:border-red-400 hover:bg-red-400/5 transition-all duration-300 rounded"
                       >
                         Revoke
                       </button>
-                    </div>
-                  )}
+                    )}
+                    <button
+                      onClick={() => {
+                        if (confirm("Delete this invitation code permanently? This cannot be undone.")) {
+                          handleDeleteInvite(invite.id)
+                        }
+                      }}
+                      className="px-4 py-2 text-xs tracking-[0.2em] uppercase text-neutral-500 border border-neutral-800 hover:border-red-400/50 hover:text-red-400 transition-all duration-300 rounded"
+                    >
+                      Delete
+                    </button>
+                  </div>
                 </div>
               ))
             )}

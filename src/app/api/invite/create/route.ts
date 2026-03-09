@@ -21,7 +21,7 @@ export async function POST(req: Request) {
     console.log("Admin authenticated:", admin.username, "ID:", admin.adminId)
 
     const body = await req.json()
-    const { max_uses, event_id } = body
+    const { max_uses, event_id, invite_type } = body
 
     console.log("Create invitation with:", { max_uses, event_id })
 
@@ -48,6 +48,7 @@ export async function POST(req: Request) {
           current_uses: 0,
           redeemed: false,
           created_by_admin_id: admin.adminId,
+          invite_type: invite_type || "guestlist",
           ...(event_id ? { event_id } : {})
         }
       ])

@@ -24,6 +24,10 @@ export async function POST(req: Request) {
     let newStatus = ""
     let qrToken: string | null = null
 
+    if (action === "cancelled") {
+      newStatus = "cancelled"
+    }
+
     if (action === "approve") {
       // Count approved
       const { count } = await supabase
