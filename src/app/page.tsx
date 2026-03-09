@@ -168,11 +168,13 @@ export default function LandingPage() {
         <div className="min-h-screen flex flex-col justify-center items-center px-6 md:px-16 py-20 text-center">
           {/* Main Heading */}
           <div className="space-y-6 mb-12">
-            <h1 className="text-6xl md:text-8xl font-light tracking-tight">
-              <span className="bg-gradient-to-b from-white via-white to-neutral-500 bg-clip-text text-transparent">
-                NIGHT VISION
-              </span>
-            </h1>
+            <Image
+              src="/logo.png"
+              alt="Night Vision"
+              width={500}
+              height={500}
+              className="h-100 w-100 object-contain mx-auto mb-6"
+            />
             <p className="text-neutral-400 text-lg tracking-[0.2em] uppercase font-light max-w-2xl mx-auto">
               Curated Events. Seamless Experience. Exclusive Access.
             </p>
