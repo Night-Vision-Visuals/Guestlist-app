@@ -1,3 +1,11 @@
+/**
+ * @file useCurrentEvent.ts
+ * @deprecated Use `useEventContext()` from `EventContext.tsx` instead.
+ *
+ * Legacy standalone hook that fetches events independently. Kept for backwards
+ * compatibility. New code should use the shared `EventContext` so that all
+ * dashboard tabs stay in sync without triggering duplicate API calls.
+ */
 import { useEffect, useState } from "react"
 
 export interface Event {

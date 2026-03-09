@@ -1,3 +1,13 @@
+/**
+ * @file /api/applications/route.ts
+ * GET /api/applications?eventId=<uuid>
+ *
+ * Returns all application records for the given event (or all events if no
+ * `eventId` is provided), sorted newest-first. Used by the Applications dashboard
+ * tab to display the guest list.
+ *
+ * Auth: admin JWT cookie required.
+ */
 import { NextResponse } from "next/server"
 import { supabase } from "@/lib/supabase"
 import { verifyAdminSession } from "@/lib/auth"

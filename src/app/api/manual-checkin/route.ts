@@ -1,3 +1,25 @@
+/**
+ * @file /api/manual-checkin/route.ts
+ * POST /api/manual-checkin
+ *
+ * Backup check-in for approved guests when their QR code can't be scanned
+ * (e.g. phone battery dead, screenshot quality issues). Admins trigger this
+ * from the Applications dashboard via the LogIn icon button on approved rows.
+ *
+ * Unlike `/api/checkin` (which looks up by QR token), this route looks up the
+ * guest directly by their application `id`.
+ *
+ * Body: { id: string } — the application UUID.
+ *
+ * Validates:
+ *   - Application exists
+ *   - Status is "approved" (unapproved guests cannot be checked in)
+ *   - Not already checked in (returns 409 if so)
+ *
+ * On success, sets `checked_in = true` and `checked_in_at = now()`.
+ *
+ * Auth: admin JWT cookie required.
+ */
 import { NextResponse } from "next/server"
 import { supabase } from "@/lib/supabase"
 import { verifyAdminSession } from "@/lib/auth"

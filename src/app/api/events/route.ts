@@ -1,3 +1,22 @@
+/**
+ * @file /api/events/route.ts
+ * Full CRUD for the `events` table.
+ *
+ * GET    /api/events         — list all events, newest first
+ * POST   /api/events         — create a new event
+ * PATCH  /api/events         — update fields on an existing event
+ * DELETE /api/events         — delete an event (restricted to username "Admin")
+ *
+ * Fields managed:
+ *   name, event_date, location, description, guest_limit, poster_url,
+ *   min_age (default 18), max_age (optional)
+ *
+ * The DELETE method performs an extra username check (admin.username === "Admin")
+ * in addition to the standard JWT auth, so only the designated super-admin
+ * account can permanently remove event records.
+ *
+ * Auth: admin JWT cookie required for all methods.
+ */
 import { NextResponse } from "next/server"
 import { supabase } from "@/lib/supabase"
 import { verifyAdminSession } from "@/lib/auth"

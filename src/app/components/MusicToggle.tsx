@@ -1,3 +1,13 @@
+/**
+ * @file MusicToggle.tsx
+ * Floating mute/unmute button rendered in the bottom-right corner of every page.
+ *
+ * Positioned fixed so it persists across client-side navigation. It reads from
+ * and writes to the `MusicProvider` context, so toggling it from any page
+ * affects the single shared audio instance.
+ *
+ * Icons: Volume2 (playing) / VolumeX (muted) from lucide-react.
+ */
 "use client"
 
 import { useMusic } from "@/app/components/MusicProvider"

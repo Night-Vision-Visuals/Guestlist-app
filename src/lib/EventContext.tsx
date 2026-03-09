@@ -1,10 +1,39 @@
+/**
+ * @file EventContext.tsx
+ * React context that fetches all events from the API once and shares them
+ * across the entire admin dashboard.
+ *
+ * Why a context?
+ * The dashboard has five tabs (Applications, Analytics, Invitations, Events,
+ * Scanner) that all need to know which event is currently selected. Rather than
+ * each page fetching events independently, `EventProvider` fetches once on
+ * mount and exposes:
+ *   - `events`       — full list of events, most recent first
+ *   - `currentEvent` — the event currently selected in the sidebar dropdown
+ *   - `setCurrentEvent` — called by the sidebar or the Events page to switch context
+ *   - `isLoading`    — true while the initial fetch is in progress
+ *   - `error`        — non-empty string if the fetch failed
+ *
+ * Usage:
+ *   Wrap the dashboard layout in `<EventProvider>` (done in `dashboard/layout.tsx`).
+ *   Inside any dashboard component, call `useEventContext()` to access the values.
+ *
+ * @example
+ * ```tsx
+ * const { currentEvent, isLoading } = useEventContext()
+ * if (isLoading) return <Spinner />
+ * fetchData(currentEvent.id)
+ * ```
+ */
 "use client"
 
 import { createContext, useContext, useState, useEffect, ReactNode } from "react"
 
+/** Minimal event shape shared across the dashboard. */
 export interface Event {
   id: string
   name: string
+  /** ISO date string (mapped from `event_date` column) */
   date: string
   location: string
   created_at: string

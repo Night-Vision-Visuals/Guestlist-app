@@ -1,3 +1,25 @@
+/**
+ * @file Sidebar.tsx
+ * Main navigation sidebar for the admin dashboard.
+ *
+ * Renders a fixed left-side panel (desktop) or a slide-in drawer (mobile)
+ * containing:
+ *   - Brand header ("NIGHT VISION")
+ *   - Event selector dropdown — switches the active event for all dashboard tabs
+ *   - Navigation links to Applications, Analytics, Invitations, Events, Scanner
+ *   - Logout button (calls POST /api/logout)
+ *
+ * Active route highlighting is handled by comparing `usePathname()` against
+ * each menu item's `href`.
+ *
+ * The sidebar is always rendered inside `EventProvider` (set up in
+ * `dashboard/layout.tsx`), so it can read and write `currentEvent` from context.
+ *
+ * Responsive behaviour:
+ *   - md+ screens: sidebar is always visible (w-64, fixed left)
+ *   - <md screens:  sidebar is hidden by default; a hamburger button (☰) in the
+ *     top-left reveals it as an overlay drawer
+ */
 "use client"
 
 import { usePathname, useRouter } from "next/navigation"

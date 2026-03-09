@@ -1,3 +1,22 @@
+/**
+ * @file /api/invite/create/route.ts
+ * POST /api/invite/create
+ *
+ * Generates a new random 6-character uppercase hex invite code (e.g. "A3F9C1")
+ * and stores it in `invite_codes` as plain text (in the `code_hash` column).
+ *
+ * Body parameters:
+ *   max_uses   {number}  1–100  — how many guests can use this code
+ *   invite_type {string}        — optional label: guestlist | friend | vip |
+ *                                 instagram | whatsapp | socialmedia (default: guestlist)
+ *   event_id   {string}         — optional UUID of the event to associate the code with
+ *
+ * The generated code is returned in the response so the admin can copy and share
+ * it. It is never hashed — plain text comparison is used throughout the app for
+ * code validation.
+ *
+ * Auth: admin JWT cookie required.
+ */
 import { NextResponse } from "next/server"
 import { supabase } from "@/lib/supabase"
 import { verifyAdminSession } from "@/lib/auth"

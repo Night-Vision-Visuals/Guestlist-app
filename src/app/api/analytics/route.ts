@@ -1,3 +1,22 @@
+/**
+ * @file /api/analytics/route.ts
+ * GET /api/analytics?eventId=<uuid>
+ *
+ * Returns aggregated statistics for a single event. All calculations are done
+ * server-side from the raw `applications` and `invite_codes` rows so the client
+ * never sees individual guest records through this endpoint.
+ *
+ * Response includes:
+ *   - Application counts by status (total, approved, rejected, waitlist, pending,
+ *     cancelled, checked-in, approval rate %)
+ *   - Gender distribution (male / female / diverse counts + percentages)
+ *   - Average guest age (calculated from `date_of_birth`)
+ *   - "Heard about us" distribution (breakdown by source)
+ *   - Invite code stats (total codes, total uses capacity, actual uses, usage %)
+ *   - Applications grouped by calendar day (for the timeline chart)
+ *
+ * Auth: admin JWT cookie required.
+ */
 import { NextResponse } from "next/server"
 import { supabase } from "@/lib/supabase"
 import { verifyAdminSession } from "@/lib/auth"

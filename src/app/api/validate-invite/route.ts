@@ -1,3 +1,27 @@
+/**
+ * @file /api/validate-invite/route.ts
+ * POST /api/validate-invite
+ *
+ * Public endpoint called from the guest login page (/login) immediately after
+ * the user enters a 6-character code. It validates the code before showing
+ * the full application form, so guests get instant feedback without having to
+ * fill in all their details first.
+ *
+ * Body: { code: string }
+ *
+ * Validation steps:
+ *  1. Find the code by exact plain-text match in `invite_codes.code_hash`
+ *     (codes are always stored and compared in uppercase).
+ *  2. Reject if `redeemed = true` (covers both revoked codes and fully-used codes).
+ *  3. Reject if `current_uses >= max_uses` (marks as redeemed as a side effect).
+ *  4. Return `{ success: true }` if all checks pass.
+ *
+ * No auth required — this is called by guests who don't have an admin session.
+ *
+ * Error codes:
+ *   400 — code is revoked or has no uses remaining
+ *   401 — code does not exist
+ */
 import { NextResponse } from "next/server"
 import { supabase } from "@/lib/supabase"
 

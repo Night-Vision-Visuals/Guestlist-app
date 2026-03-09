@@ -1,3 +1,21 @@
+/**
+ * @file MusicProvider.tsx
+ * Global ambient audio context for the Night Vision app.
+ *
+ * Wraps the root layout (`src/app/layout.tsx`) and provides a shared audio
+ * player so all pages can share the same playback state. Autoplay is blocked
+ * by most browsers until the first user gesture, so music only starts when the
+ * user explicitly taps the `MusicToggle` button.
+ *
+ * Context value:
+ *   isPlaying  — whether audio is currently playing
+ *   toggleMusic — start/stop playback
+ *
+ * The audio source is expected at `/public/music.mp3` (or whichever file is
+ * referenced in the `<audio>` element inside this component).
+ *
+ * Consumers: import `useMusic()` to access `{ isPlaying, toggleMusic }`.
+ */
 "use client"
 
 import { createContext, useContext, useEffect, useState } from "react"

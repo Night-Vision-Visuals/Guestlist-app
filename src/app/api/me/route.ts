@@ -1,3 +1,13 @@
+/**
+ * @file /api/me/route.ts
+ * GET /api/me
+ *
+ * Returns the username and ID of the currently authenticated admin, decoded
+ * from the JWT cookie. Used by the Events page to determine whether the caller
+ * has the elevated "Admin" username required to delete events.
+ *
+ * Auth: admin JWT cookie required.
+ */
 import { NextResponse } from "next/server"
 import { verifyAdminSession } from "@/lib/auth"
 

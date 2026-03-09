@@ -1,3 +1,13 @@
+/**
+ * @file /api/logout/route.ts
+ * POST /api/logout
+ *
+ * Ends the admin session by overwriting the `admin_token` cookie with an empty
+ * value and `maxAge: 0`, causing the browser to immediately discard it.
+ *
+ * No request body is needed — the cookie identity is implicit.
+ * After a successful response, the frontend redirects to `/admin`.
+ */
 import { NextResponse } from "next/server"
 
 export async function POST() {

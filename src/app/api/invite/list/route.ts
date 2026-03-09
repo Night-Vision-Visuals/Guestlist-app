@@ -1,3 +1,17 @@
+/**
+ * @file /api/invite/list/route.ts
+ * GET /api/invite/list?eventId=<uuid>
+ *
+ * Returns all invite codes, optionally filtered to a specific event.
+ * Each row is joined with the `admins` table to include the `username` of the
+ * admin who created the code (used for the "Created By" column in the UI).
+ * Results are sorted newest-first.
+ *
+ * The `invite_type` column (guestlist | friend | vip | instagram | etc.) is
+ * included so the UI can display the appropriate label/icon per code.
+ *
+ * Auth: admin JWT cookie required.
+ */
 import { NextResponse } from "next/server"
 import { supabase } from "@/lib/supabase"
 import { verifyAdminSession } from "@/lib/auth"

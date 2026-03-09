@@ -1,3 +1,21 @@
+/**
+ * @file /api/checkin/route.ts
+ * POST /api/checkin — QR-scanner door check-in
+ * GET  /api/checkin?token= — look up a guest by QR token
+ *
+ * POST: Called by the Scanner page when a QR code is successfully decoded.
+ *   - Accepts `{ token }` in the request body.
+ *   - Validates the guest is approved and not already checked in.
+ *   - Sets `checked_in = true` and records `checked_in_at`.
+ *   - Returns guest name and check-in timestamp on success.
+ *   - Returns `alreadyCheckedIn: true` (HTTP 409) if scanned twice — the scanner
+ *     page shows a yellow "already checked in" card instead of an error.
+ *
+ * GET: Used to preview a guest record before the check-in action is taken.
+ *   Returns guest info including current check-in state.
+ *
+ * Auth: admin JWT cookie required for both methods.
+ */
 import { NextResponse } from "next/server"
 import { supabase } from "@/lib/supabase"
 import { verifyAdminSession } from "@/lib/auth"

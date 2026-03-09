@@ -1,3 +1,25 @@
+/**
+ * @file /api/apply/route.ts
+ * POST /api/apply
+ *
+ * Public endpoint — no admin auth required. Called when a guest submits the
+ * application form on `/login` after entering a valid invite code.
+ *
+ * Flow:
+ *  1. Validate all required fields (name, DOB, email, gender, heard-about-us,
+ *     GDPR consent, invite code).
+ *  2. Look up the invite code in `invite_codes` by plain-text match.
+ *     - Reject if the code is revoked (`revoked_at IS NOT NULL`).
+ *     - Reject if the code has no uses remaining.
+ *  3. Insert a new row in `applications` with status `applied`.
+ *  4. Increment `invite_codes.current_uses`; mark as `redeemed` when max reached.
+ *  5. Return `{ success, applicationId, usesRemaining }`.
+ *
+ * Error codes:
+ *   400 — validation failure or exhausted/revoked code
+ *   401 — code not found
+ *   500 — database error
+ */
 import { NextResponse } from "next/server"
 import { supabase } from "@/lib/supabase"
 

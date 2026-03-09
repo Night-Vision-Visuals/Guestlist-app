@@ -1,3 +1,18 @@
+/**
+ * @file /api/edit-application/route.ts
+ * POST /api/edit-application
+ *
+ * Allows admins to directly edit an existing application's email address or
+ * status from the Applications dashboard tab (pencil icon → inline form).
+ *
+ * Accepted status values: applied | approved | rejected | waitlist | cancelled
+ *
+ * Special behaviour when setting status to "approved":
+ *   - If the application doesn't already have a `qr_token`, one is generated
+ *     (UUID v4). This token powers the `/ticket/[token]` QR ticket page.
+ *
+ * Auth: admin JWT cookie required.
+ */
 import { NextResponse } from "next/server"
 import { supabase } from "@/lib/supabase"
 import { verifyAdminSession } from "@/lib/auth"

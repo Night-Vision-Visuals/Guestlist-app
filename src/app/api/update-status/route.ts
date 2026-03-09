@@ -1,3 +1,27 @@
+/**
+ * @file /api/update-status/route.ts
+ * POST /api/update-status
+ *
+ * Primary status-change endpoint used by the Applications tab action buttons
+ * (Approve, Reject, Waitlist, Cancel).
+ *
+ * Body: { id: string, action: "approve" | "reject" | "waitlist" | "cancelled" }
+ *
+ * Action behaviour:
+ *   "approve"   — checks current approved count; if < 130 sets status "approved"
+ *                 and generates a UUID QR token stored in `qr_token`. If ≥ 130,
+ *                 auto-moves to "waitlist" instead. The QR token powers the
+ *                 /ticket/[token] page the guest uses for door entry.
+ *   "reject"    — sets status "rejected"
+ *   "waitlist"  — sets status "waitlist"
+ *   "cancelled" — sets status "cancelled" (guest-initiated; not treated as no-show)
+ *
+ * The 130-guest cap is hardcoded here. Adjust it if the venue capacity changes.
+ *
+ * Returns { success: true, qr_token? } on success.
+ *
+ * Auth: admin JWT cookie required.
+ */
 import { NextResponse } from "next/server"
 import { supabase } from "@/lib/supabase"
 import { verifyAdminSession } from "@/lib/auth"

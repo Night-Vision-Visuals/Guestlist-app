@@ -1,3 +1,15 @@
+/**
+ * @file /api/invite/delete/route.ts
+ * POST /api/invite/delete
+ *
+ * Permanently removes an invite code record from the database.
+ * Unlike revoking (which preserves the row and sets `revoked_at`), deletion
+ * is irreversible and removes all history for that code.
+ *
+ * Body: { id: string } — the UUID of the invite_codes row to delete.
+ *
+ * Auth: admin JWT cookie required.
+ */
 import { NextResponse } from "next/server"
 import { supabase } from "@/lib/supabase"
 import { verifyAdminSession } from "@/lib/auth"
