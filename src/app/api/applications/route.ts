@@ -2,7 +2,7 @@ import { NextResponse } from "next/server"
 import { supabase } from "@/lib/supabase"
 import { verifyAdminSession } from "@/lib/auth"
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
     // Check if admin is authenticated
     const admin = await verifyAdminSession()
@@ -14,10 +14,19 @@ export async function GET() {
       )
     }
 
-    const { data, error } = await supabase
+    const { searchParams } = new URL(req.url)
+    const eventId = searchParams.get("eventId")
+
+    let query = supabase
       .from("applications")
       .select("*")
       .order("created_at", { ascending: false })
+
+    if (eventId) {
+      query = query.eq("event_id", eventId)
+    }
+
+    const { data, error } = await query
 
     if (error) {
       return NextResponse.json({ error: "Error fetching" }, { status: 500 })

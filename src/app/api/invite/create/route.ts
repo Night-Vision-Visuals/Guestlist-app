@@ -22,9 +22,9 @@ export async function POST(req: Request) {
     console.log("Admin authenticated:", admin.username, "ID:", admin.adminId)
 
     const body = await req.json()
-    const { max_uses } = body
+    const { max_uses, event_id } = body
 
-    console.log("Create invitation with:", { max_uses })
+    console.log("Create invitation with:", { max_uses, event_id })
 
     // Validate input
     if (!max_uses || max_uses < 1 || max_uses > 100) {
@@ -42,7 +42,7 @@ export async function POST(req: Request) {
     // Hash the code for storage
     const codeHash = await bcrypt.hash(rawCode, 10)
 
-    // Insert into database with admin ID
+    // Insert into database with admin ID and optional event ID
     const { data: invite, error: insertError } = await supabase
       .from("invite_codes")
       .insert([
@@ -51,7 +51,8 @@ export async function POST(req: Request) {
           max_uses,
           current_uses: 0,
           redeemed: false,
-          created_by_admin_id: admin.adminId
+          created_by_admin_id: admin.adminId,
+          ...(event_id ? { event_id } : {})
         }
       ])
       .select()

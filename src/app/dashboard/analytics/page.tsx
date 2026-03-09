@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import { useCurrentEvent } from "@/lib/useCurrentEvent"
+import { useEventContext } from "@/lib/EventContext"
 
 interface Analytics {
   event: {
@@ -30,7 +30,7 @@ interface Analytics {
 
 export default function AnalyticsPage() {
   const router = useRouter()
-  const { currentEvent, events, setCurrentEvent, isLoading: eventsLoading } = useCurrentEvent()
+  const { currentEvent, isLoading: eventsLoading } = useEventContext()
   const [analytics, setAnalytics] = useState<Analytics | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState("")
@@ -39,6 +39,7 @@ export default function AnalyticsPage() {
     if (currentEvent) {
       fetchAnalytics(currentEvent.id)
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentEvent])
 
   const fetchAnalytics = async (eventId: string) => {
@@ -65,13 +66,6 @@ export default function AnalyticsPage() {
       setError("Error fetching analytics")
     } finally {
       setIsLoading(false)
-    }
-  }
-
-  const handleEventChange = (eventId: string) => {
-    const selected = events.find((e) => e.id === eventId)
-    if (selected) {
-      setCurrentEvent(selected)
     }
   }
 
@@ -104,31 +98,6 @@ export default function AnalyticsPage() {
 
       {/* Content */}
       <div className="relative z-10">
-        {/* Top Navigation */}
-        <div className="flex justify-between items-center px-6 md:px-16 py-12 border-b border-neutral-800">
-          <div className="space-y-1">
-            <div className="text-xs tracking-[0.3em] uppercase text-neutral-500 font-light">
-              NIGHT VISION
-            </div>
-            <div className="h-px w-12 bg-gradient-to-r from-white to-transparent" />
-          </div>
-          <div className="flex items-center gap-8">
-            <div>
-              <select
-                value={currentEvent?.id || ""}
-                onChange={(e) => handleEventChange(e.target.value)}
-                className="bg-transparent border border-neutral-800 px-4 py-2 text-white text-xs tracking-[0.2em] uppercase focus:outline-none focus:border-neutral-600 transition-all duration-300 rounded"
-              >
-                {events.map((event) => (
-                  <option key={event.id} value={event.id} className="bg-black">
-                    {event.name} - {new Date(event.date).toLocaleDateString()}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-        </div>
-
         {/* Main Content */}
         <div className="px-6 md:px-16 py-12">
           {/* Header */}

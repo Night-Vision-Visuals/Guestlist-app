@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
+import { useEventContext } from "@/lib/EventContext"
 
 interface Application {
   id: string
@@ -19,24 +20,27 @@ interface Application {
 
 export default function DashboardPage() {
   const router = useRouter()
+  const { currentEvent, isLoading: eventsLoading } = useEventContext()
   const [applications, setApplications] = useState<Application[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState("")
   const [searchTerm, setSearchTerm] = useState("")
   const [filterStatus, setFilterStatus] = useState("all")
-  const [eventName, setEventName] = useState("Event")
-  const [eventDate, setEventDate] = useState("")
-  const [isAuthenticated, setIsAuthenticated] = useState(true)
 
   useEffect(() => {
-    // Fetch applications on mount
-    fetchApplications()
-  }, [])
+    if (currentEvent) {
+      fetchApplications(currentEvent.id)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentEvent])
 
-  const fetchApplications = async () => {
+  const fetchApplications = async (eventId?: string) => {
     try {
       setIsLoading(true)
-      const res = await fetch("/api/applications", {
+      const url = eventId
+        ? `/api/applications?eventId=${eventId}`
+        : "/api/applications"
+      const res = await fetch(url, {
         method: "GET",
         credentials: "include"
       })
@@ -44,7 +48,6 @@ export default function DashboardPage() {
       // If 401 or 403, user is not authenticated
       if (res.status === 401 || res.status === 403) {
         console.log("Unauthorized access, redirecting to admin")
-        setIsAuthenticated(false)
         router.push("/admin")
         return
       }
@@ -55,16 +58,10 @@ export default function DashboardPage() {
 
       const data = await res.json()
       setApplications(data || [])
-
-      // Extract event info from environment
-      setEventName(process.env.NEXT_PUBLIC_EVENT_NAME || "Event")
-      setEventDate(process.env.NEXT_PUBLIC_EVENT_DATE || "")
       setError("")
-      setIsAuthenticated(true)
     } catch (err) {
       console.error("Fetch error:", err)
       setError("Error fetching applications")
-      setIsAuthenticated(false)
       router.push("/admin")
     } finally {
       setIsLoading(false)
@@ -81,7 +78,6 @@ export default function DashboardPage() {
       })
 
       if (res.status === 401 || res.status === 403) {
-        setIsAuthenticated(false)
         router.push("/admin")
         return
       }
@@ -91,7 +87,7 @@ export default function DashboardPage() {
       }
 
       // Refresh applications
-      fetchApplications()
+      fetchApplications(currentEvent?.id)
     } catch (err) {
       console.error(err)
       setError("Error updating status")
@@ -140,25 +136,7 @@ export default function DashboardPage() {
   }
 
   // If not authenticated, show loading screen
-  if (!isAuthenticated) {
-    return (
-      <div className="min-h-screen bg-black text-white overflow-hidden">
-        <div className="fixed inset-0 z-0">
-          <div className="absolute inset-0 bg-gradient-to-br from-neutral-900 via-black to-black" />
-          <div className="absolute top-0 left-1/4 w-96 h-96 bg-white/10 rounded-full blur-3xl opacity-20 animate-pulse" />
-          <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-white/5 rounded-full blur-3xl opacity-20 animate-pulse" />
-        </div>
-
-        <div className="relative z-10 min-h-screen flex items-center justify-center">
-          <p className="text-lg tracking-[0.2em] uppercase text-neutral-400">
-            Redirecting...
-          </p>
-        </div>
-      </div>
-    )
-  }
-
-  if (isLoading) {
+  if (eventsLoading || isLoading) {
     return (
       <div className="min-h-screen bg-black text-white overflow-hidden">
         <div className="fixed inset-0 z-0">
@@ -200,7 +178,7 @@ export default function DashboardPage() {
               </span>
             </h1>
             <p className="text-neutral-400 text-sm tracking-[0.2em] uppercase font-light mt-2">
-              {eventName} - {eventDate}
+              {currentEvent?.name} - {currentEvent ? new Date(currentEvent.date).toLocaleDateString() : ""}
             </p>
           </div>
           <div className="text-right">
@@ -246,7 +224,7 @@ export default function DashboardPage() {
 
           {/* Refresh Button */}
           <button
-            onClick={fetchApplications}
+            onClick={() => fetchApplications(currentEvent?.id)}
             className="mb-8 px-4 py-2 bg-neutral-900 border border-neutral-800 text-neutral-300 hover:text-white hover:border-neutral-600 transition-all duration-300 text-xs tracking-[0.2em] uppercase rounded"
           >
             Refresh
