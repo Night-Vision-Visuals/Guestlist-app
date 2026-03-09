@@ -240,7 +240,7 @@ export default function InvitesPage() {
             </button>
 
             <p className="text-[11px] tracking-[0.15em] text-neutral-600 text-center max-w-xs">
-              Save this code — it won&apos;t be shown again.
+              Share this code with your guest.
             </p>
 
             <button
@@ -361,9 +361,9 @@ export default function InvitesPage() {
                   <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mb-4">
                     <div>
                       <p className="text-xs tracking-[0.2em] uppercase text-neutral-500 mb-2">
-                        Code Hash
+                        Code
                       </p>
-                      <p className="text-white font-mono text-sm">{invite.code_hash.substring(0, 12)}...</p>
+                      <p className="text-white font-mono text-sm tracking-[0.2em]">{invite.code_hash}</p>
                     </div>
 
                     <div>

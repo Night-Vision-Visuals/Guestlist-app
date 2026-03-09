@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useRef } from "react"
+import Link from "next/link"
 
 export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false)
@@ -17,7 +18,10 @@ export default function LoginPage() {
     date_of_birth: "",
     email: "",
     instagram: "",
-    intro: ""
+    intro: "",
+    gender: "",
+    heard_about_us: "",
+    datenschutz_accepted: false
   })
 
   const handleCodeChange = (index: number, value: string) => {
@@ -89,6 +93,21 @@ export default function LoginPage() {
       return
     }
 
+    if (!applicationData.gender) {
+      setMessage("Please select your gender.")
+      return
+    }
+
+    if (!applicationData.heard_about_us) {
+      setMessage("Please tell us how you heard about the party.")
+      return
+    }
+
+    if (!applicationData.datenschutz_accepted) {
+      setMessage("Please accept the privacy policy to continue.")
+      return
+    }
+
     setIsLoading(true)
     setMessage("")
 
@@ -112,7 +131,10 @@ export default function LoginPage() {
           date_of_birth: "",
           email: "",
           instagram: "",
-          intro: ""
+          intro: "",
+          gender: "",
+          heard_about_us: "",
+          datenschutz_accepted: false
         })
       } else {
         // Display the actual error message from the API
@@ -200,7 +222,7 @@ export default function LoginPage() {
                   <ul className="text-sm text-neutral-300 space-y-2 font-light">
                     <li>✓ Check your email for updates</li>
                     <li>✓ Follow us on Instagram for announcements</li>
-                    <li>✓ We'll contact you by {new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toLocaleDateString()}</li>
+                    <li>✓ We&apos;ll contact you by {new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toLocaleDateString()}</li>
                   </ul>
                 </div>
 
@@ -436,6 +458,103 @@ export default function LoginPage() {
                           <div className="absolute -bottom-1 left-0 w-20 h-px bg-gradient-to-r from-white via-white to-transparent" />
                         )}
                       </div>
+                    </div>
+
+                    {/* Gender Field */}
+                    <div className="space-y-3 group">
+                      <label className="text-xs tracking-[0.2em] uppercase text-neutral-500 group-focus-within:text-white transition-colors duration-300">
+                        Gender *
+                      </label>
+                      <div className="relative">
+                        <select
+                          value={applicationData.gender}
+                          onChange={(e) => setApplicationData({ ...applicationData, gender: e.target.value })}
+                          onFocus={() => setFocused("gender")}
+                          onBlur={() => setFocused(null)}
+                          required
+                          className={`w-full bg-transparent text-white border-b-2 pb-4 focus:outline-none transition-all duration-500 appearance-none cursor-pointer ${
+                            focused === "gender"
+                              ? "border-white shadow-[0_1px_0_0_rgba(255,255,255,0.3)]"
+                              : "border-neutral-800 hover:border-neutral-700"
+                          } ${applicationData.gender === "" ? "text-neutral-600" : "text-white"}`}
+                        >
+                          <option value="" disabled className="bg-black text-neutral-600">Select gender</option>
+                          <option value="male" className="bg-black text-white">Male</option>
+                          <option value="female" className="bg-black text-white">Female</option>
+                          <option value="diverse" className="bg-black text-white">Diverse / Non-binary</option>
+                        </select>
+                        {focused === "gender" && (
+                          <div className="absolute -bottom-1 left-0 w-20 h-px bg-gradient-to-r from-white via-white to-transparent" />
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Heard About Us Field */}
+                    <div className="space-y-3 group">
+                      <label className="text-xs tracking-[0.2em] uppercase text-neutral-500 group-focus-within:text-white transition-colors duration-300">
+                        How did you hear about us? *
+                      </label>
+                      <div className="relative">
+                        <select
+                          value={applicationData.heard_about_us}
+                          onChange={(e) => setApplicationData({ ...applicationData, heard_about_us: e.target.value })}
+                          onFocus={() => setFocused("heard_about_us")}
+                          onBlur={() => setFocused(null)}
+                          required
+                          className={`w-full bg-transparent text-white border-b-2 pb-4 focus:outline-none transition-all duration-500 appearance-none cursor-pointer ${
+                            focused === "heard_about_us"
+                              ? "border-white shadow-[0_1px_0_0_rgba(255,255,255,0.3)]"
+                              : "border-neutral-800 hover:border-neutral-700"
+                          } ${applicationData.heard_about_us === "" ? "text-neutral-600" : "text-white"}`}
+                        >
+                          <option value="" disabled className="bg-black text-neutral-600">Select an option</option>
+                          <option value="friend" className="bg-black text-white">From a friend / Word of mouth</option>
+                          <option value="instagram" className="bg-black text-white">Instagram</option>
+                          <option value="flyer" className="bg-black text-white">Flyer / Poster</option>
+                          <option value="tiktok" className="bg-black text-white">TikTok</option>
+                          <option value="other" className="bg-black text-white">Other</option>
+                        </select>
+                        {focused === "heard_about_us" && (
+                          <div className="absolute -bottom-1 left-0 w-20 h-px bg-gradient-to-r from-white via-white to-transparent" />
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Datenschutz Checkbox */}
+                    <div className="space-y-3">
+                      <label className="flex items-start gap-3 cursor-pointer group">
+                        <div className="relative mt-0.5 flex-shrink-0">
+                          <input
+                            type="checkbox"
+                            checked={applicationData.datenschutz_accepted}
+                            onChange={(e) => setApplicationData({ ...applicationData, datenschutz_accepted: e.target.checked })}
+                            required
+                            className="sr-only"
+                          />
+                          <div className={`w-4 h-4 border transition-all duration-300 flex items-center justify-center ${
+                            applicationData.datenschutz_accepted
+                              ? "border-white bg-white"
+                              : "border-neutral-600 group-hover:border-neutral-400"
+                          }`}>
+                            {applicationData.datenschutz_accepted && (
+                              <svg className="w-2.5 h-2.5 text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                              </svg>
+                            )}
+                          </div>
+                        </div>
+                        <span className="text-xs tracking-[0.1em] text-neutral-500 group-hover:text-neutral-300 transition-colors duration-300 leading-relaxed">
+                          Ich habe die{" "}
+                          <Link
+                            href="/datenschutz"
+                            target="_blank"
+                            className="text-white underline underline-offset-2 hover:text-neutral-300 transition-colors duration-300"
+                          >
+                            Datenschutzerklärung
+                          </Link>
+                          {" "}gelesen und stimme der Verarbeitung meiner personenbezogenen Daten zu. *
+                        </span>
+                      </label>
                     </div>
 
                     {/* Message Display */}

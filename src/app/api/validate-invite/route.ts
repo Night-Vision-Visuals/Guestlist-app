@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server"
 import { supabase } from "@/lib/supabase"
-import bcrypt from "bcryptjs"
 
 export async function POST(req: Request) {
   try {
@@ -12,44 +11,19 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "No code provided" }, { status: 400 })
     }
 
-    // Fetch all invitation codes
-    const { data: invitations, error: fetchError } = await supabase
+    // Find the invitation code using plain text comparison
+    const { data: matchedInvitation, error: fetchError } = await supabase
       .from("invite_codes")
       .select("id, code_hash, redeemed, current_uses, max_uses")
+      .eq("code_hash", code.toUpperCase())
+      .single()
 
-    if (fetchError) {
-      console.error("Error fetching invitations:", fetchError)
-      return NextResponse.json({ error: "Server error" }, { status: 500 })
-    }
-
-    if (!invitations || invitations.length === 0) {
-      console.log("No invitations found in database")
-      return NextResponse.json({ error: "Invalid code" }, { status: 401 })
-    }
-
-    console.log(`Found ${invitations.length} invitations to check`)
-
-    // Find matching code hash
-    let matchedInvitation = null
-    for (const invite of invitations) {
-      try {
-        const valid = await bcrypt.compare(code, invite.code_hash)
-        if (valid) {
-          matchedInvitation = invite
-          console.log("Code matched:", { id: invite.id, redeemed: invite.redeemed, current_uses: invite.current_uses, max_uses: invite.max_uses })
-          break
-        }
-      } catch (bcryptError) {
-        console.error("Bcrypt comparison error:", bcryptError)
-        continue
-      }
-    }
-
-    // Code not found
-    if (!matchedInvitation) {
+    if (fetchError || !matchedInvitation) {
       console.log("No matching code found")
       return NextResponse.json({ error: "Invalid code" }, { status: 401 })
     }
+
+    console.log("Code matched:", { id: matchedInvitation.id, redeemed: matchedInvitation.redeemed, current_uses: matchedInvitation.current_uses, max_uses: matchedInvitation.max_uses })
 
     // Check if code is already redeemed (all uses consumed)
     if (matchedInvitation.redeemed) {
@@ -63,15 +37,10 @@ export async function POST(req: Request) {
     // Check if code has reached max uses
     if (matchedInvitation.current_uses >= matchedInvitation.max_uses) {
       console.log("Max uses reached, marking as redeemed")
-      // Mark as redeemed since max uses reached
-      const { error: updateError } = await supabase
+      await supabase
         .from("invite_codes")
         .update({ redeemed: true })
         .eq("id", matchedInvitation.id)
-
-      if (updateError) {
-        console.error("Error updating invitation code:", updateError)
-      }
 
       return NextResponse.json(
         { error: "This invitation code has reached its maximum uses" },

@@ -1,7 +1,7 @@
 "use client"
 
 import { usePathname, useRouter } from "next/navigation"
-import { BarChart3, Users, Ticket, LogOut, Menu, X } from "lucide-react"
+import { BarChart3, Users, Ticket, LogOut, Menu, X, CalendarPlus, QrCode } from "lucide-react"
 import { useState } from "react"
 import { useEventContext } from "@/lib/EventContext"
 
@@ -29,6 +29,18 @@ export default function Sidebar() {
       href: "/dashboard/invites",
       icon: Ticket,
       description: "Manage invitation codes"
+    },
+    {
+      label: "Events",
+      href: "/dashboard/events",
+      icon: CalendarPlus,
+      description: "Create & manage events"
+    },
+    {
+      label: "Scanner",
+      href: "/dashboard/scanner",
+      icon: QrCode,
+      description: "QR code door scanner"
     }
   ]
 

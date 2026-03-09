@@ -19,8 +19,8 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
     audioElement.loop = true
     audioElement.volume = 0.3
     
-    // Use the correct path for Vercel
-    const audioPath = "/music/background.mp3"
+    // Use the correct path - case-sensitive on Linux/Vercel
+    const audioPath = "/Music/background.mp3"
     
     audioElement.src = audioPath
     

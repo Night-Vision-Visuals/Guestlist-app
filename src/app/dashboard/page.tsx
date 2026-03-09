@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useEventContext } from "@/lib/EventContext"
+import { QrCode } from "lucide-react"
 
 interface Application {
   id: string
@@ -12,10 +13,15 @@ interface Application {
   email: string
   instagram: string
   intro: string
+  gender: string | null
+  heard_about_us: string | null
   status: string
   no_show_count: number
   created_at: string
   event_id: string
+  qr_token: string | null
+  checked_in: boolean | null
+  checked_in_at: string | null
 }
 
 export default function DashboardPage() {
@@ -317,6 +323,50 @@ export default function DashboardPage() {
                       <p className="text-neutral-300 font-light text-sm italic">
                         {app.intro}
                       </p>
+                    </div>
+                  )}
+
+                  {/* Additional Info */}
+                  {(app.gender || app.heard_about_us) && (
+                    <div className="mb-6 pb-6 border-b border-neutral-800 grid grid-cols-2 gap-4">
+                      {app.gender && (
+                        <div>
+                          <p className="text-xs tracking-[0.2em] uppercase text-neutral-500 mb-1">Gender</p>
+                          <p className="text-neutral-300 font-light text-sm capitalize">{app.gender}</p>
+                        </div>
+                      )}
+                      {app.heard_about_us && (
+                        <div>
+                          <p className="text-xs tracking-[0.2em] uppercase text-neutral-500 mb-1">Heard via</p>
+                          <p className="text-neutral-300 font-light text-sm capitalize">{app.heard_about_us.replace("_", " ")}</p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* QR Code for approved guests */}
+                  {app.status === "approved" && app.qr_token && (
+                    <div className="mb-6 pb-6 border-b border-neutral-800">
+                      <p className="text-xs tracking-[0.2em] uppercase text-neutral-500 mb-3">
+                        Ticket QR Code
+                        {app.checked_in && <span className="ml-2 text-yellow-400">— Checked In ✓</span>}
+                      </p>
+                      <div className="flex items-center gap-4">
+                        <a
+                          href={`/ticket/${app.qr_token}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-2 px-4 py-2 text-xs tracking-[0.2em] uppercase text-emerald-400 border border-emerald-400/30 hover:border-emerald-400 hover:bg-emerald-400/5 transition-all duration-300 rounded"
+                        >
+                          <QrCode size={14} />
+                          View Ticket
+                        </a>
+                        {app.checked_in_at && (
+                          <p className="text-neutral-600 text-xs">
+                            Checked in: {new Date(app.checked_in_at).toLocaleString()}
+                          </p>
+                        )}
+                      </div>
                     </div>
                   )}
 

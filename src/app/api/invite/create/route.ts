@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server"
 import { supabase } from "@/lib/supabase"
 import { verifyAdminSession } from "@/lib/auth"
-import bcrypt from "bcryptjs"
 import crypto from "crypto"
 
 export async function POST(req: Request) {
@@ -34,20 +33,17 @@ export async function POST(req: Request) {
       )
     }
 
-    // Generate a random 6-character code
+    // Generate a random 6-character code (plain text)
     const rawCode = crypto.randomBytes(3).toString("hex").toUpperCase()
     
     console.log("Generated code:", rawCode)
 
-    // Hash the code for storage
-    const codeHash = await bcrypt.hash(rawCode, 10)
-
-    // Insert into database with admin ID and optional event ID
+    // Insert into database - store the code as plain text in code_hash column
     const { data: invite, error: insertError } = await supabase
       .from("invite_codes")
       .insert([
         {
-          code_hash: codeHash,
+          code_hash: rawCode,
           max_uses,
           current_uses: 0,
           redeemed: false,
@@ -75,14 +71,13 @@ export async function POST(req: Request) {
 
     console.log("Invitation created:", invite[0].id)
 
-    // Return the plaintext code (only shown once!)
     return NextResponse.json({
       success: true,
       code: rawCode,
       id: invite[0].id,
       max_uses: invite[0].max_uses,
       created_at: invite[0].created_at,
-      message: "Code created successfully. Save this code - you won't be able to see it again!"
+      message: "Code created successfully."
     })
   } catch (error) {
     console.error("Invite creation error:", error)

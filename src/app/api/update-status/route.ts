@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { supabase } from "@/lib/supabase"
 import { verifyAdminSession } from "@/lib/auth"
+import { v4 as uuidv4 } from "uuid"
 
 export async function POST(req: Request) {
   try {
@@ -21,6 +22,7 @@ export async function POST(req: Request) {
     }
 
     let newStatus = ""
+    let qrToken: string | null = null
 
     if (action === "approve") {
       // Count approved
@@ -33,6 +35,8 @@ export async function POST(req: Request) {
         newStatus = "waitlist"
       } else {
         newStatus = "approved"
+        // Generate a unique QR token for approved guests
+        qrToken = uuidv4()
       }
     }
 
@@ -44,16 +48,21 @@ export async function POST(req: Request) {
       newStatus = "waitlist"
     }
 
+    const updateData: Record<string, string | null> = { status: newStatus }
+    if (qrToken) {
+      updateData.qr_token = qrToken
+    }
+
     const { error } = await supabase
       .from("applications")
-      .update({ status: newStatus })
+      .update(updateData)
       .eq("id", id)
 
     if (error) {
       return NextResponse.json({ error: "Update failed" }, { status: 500 })
     }
 
-    return NextResponse.json({ success: true })
+    return NextResponse.json({ success: true, qr_token: qrToken })
   } catch (error) {
     console.error("Error:", error)
     return NextResponse.json(
