@@ -4,26 +4,47 @@
 @tailwind utilities;
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #0a0a0a;
+  --foreground: #ededed;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-body);
+  --font-mono: var(--font-body);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
+/* ── Body font ─────────────────────────────────────────────────────────────── */
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-body), "DM Mono", monospace;
+}
+
+/* ── Arcade headings (h1) ───────────────────────────────────────────────────
+   Press Start 2P is a single-weight pixel font.
+   All h1s are forced ALL CAPS and clamped so they never overflow on mobile.
+   Add class "no-arcade" to any h1 to opt out.                               */
+h1:not(.no-arcade) {
+  font-family: var(--font-arcade), "Press Start 2P", monospace;
+  font-weight: 400 !important;
+  text-transform: uppercase;
+  letter-spacing: 0.04em !important;
+  font-size: clamp(1rem, 3vw, 2rem) !important;
+  line-height: 1.55 !important;
+  text-shadow:
+    0 0 6px  rgba(255, 255, 255, 0.60),
+    0 0 18px rgba(255, 255, 255, 0.28),
+    0 0 40px rgba(255, 255, 255, 0.12);
+}
+
+/* Standalone utility for arcade style on any element */
+.arcade {
+  font-family: var(--font-arcade), "Press Start 2P", monospace;
+  text-transform: uppercase;
+  text-shadow:
+    0 0 6px  rgba(255, 255, 255, 0.60),
+    0 0 18px rgba(255, 255, 255, 0.28),
+    0 0 40px rgba(255, 255, 255, 0.12);
 }

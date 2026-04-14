@@ -1,17 +1,24 @@
 import type { Metadata } from "next"
-import { Geist, Geist_Mono } from "next/font/google"
+import { Press_Start_2P, DM_Mono } from "next/font/google"
 import "./globals.css"
 import { MusicProvider } from "@/app/components/MusicProvider"
 import { MusicToggle } from "@/app/components/MusicToggle"
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+// Arcade pixel font — all h1 headings, all caps + glow
+const pressStart2P = Press_Start_2P({
+  weight: "400",
+  variable: "--font-arcade",
   subsets: ["latin"],
+  display: "swap",
 })
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+// Body font — DM Mono (clean monospace, Punto-adjacent)
+const dmMono = DM_Mono({
+  weight: ["300", "400", "500"],
+  style: ["normal", "italic"],
+  variable: "--font-body",
   subsets: ["latin"],
+  display: "swap",
 })
 
 export const metadata: Metadata = {
@@ -27,7 +34,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-black text-white`}
+        className={`${pressStart2P.variable} ${dmMono.variable} antialiased bg-black text-white`}
       >
         <MusicProvider>
           {children}

@@ -1,7 +1,25 @@
+/**
+ * @file /api/invite/create/route.ts
+ * POST /api/invite/create
+ *
+ * Generates a new random 6-character uppercase hex invite code (e.g. "A3F9C1")
+ * and stores it in `invite_codes` as plain text (in the `code_hash` column).
+ *
+ * Body parameters:
+ *   max_uses   {number}  1–100  — how many guests can use this code
+ *   invite_type {string}        — optional label: guestlist | friend | vip |
+ *                                 instagram | whatsapp | socialmedia (default: guestlist)
+ *   event_id   {string}         — optional UUID of the event to associate the code with
+ *
+ * The generated code is returned in the response so the admin can copy and share
+ * it. It is never hashed — plain text comparison is used throughout the app for
+ * code validation.
+ *
+ * Auth: admin JWT cookie required.
+ */
 import { NextResponse } from "next/server"
 import { supabase } from "@/lib/supabase"
 import { verifyAdminSession } from "@/lib/auth"
-import bcrypt from "bcryptjs"
 import crypto from "crypto"
 
 export async function POST(req: Request) {
@@ -22,9 +40,9 @@ export async function POST(req: Request) {
     console.log("Admin authenticated:", admin.username, "ID:", admin.adminId)
 
     const body = await req.json()
-    const { max_uses } = body
+    const { max_uses, event_id, invite_type } = body
 
-    console.log("Create invitation with:", { max_uses })
+    console.log("Create invitation with:", { max_uses, event_id })
 
     // Validate input
     if (!max_uses || max_uses < 1 || max_uses > 100) {
@@ -34,24 +52,23 @@ export async function POST(req: Request) {
       )
     }
 
-    // Generate a random 6-character code
+    // Generate a random 6-character code (plain text)
     const rawCode = crypto.randomBytes(3).toString("hex").toUpperCase()
     
     console.log("Generated code:", rawCode)
 
-    // Hash the code for storage
-    const codeHash = await bcrypt.hash(rawCode, 10)
-
-    // Insert into database with admin ID
+    // Insert into database - store the code as plain text in code_hash column
     const { data: invite, error: insertError } = await supabase
       .from("invite_codes")
       .insert([
         {
-          code_hash: codeHash,
+          code_hash: rawCode,
           max_uses,
           current_uses: 0,
           redeemed: false,
-          created_by_admin_id: admin.adminId
+          created_by_admin_id: admin.adminId,
+          invite_type: invite_type || "guestlist",
+          ...(event_id ? { event_id } : {})
         }
       ])
       .select()
@@ -74,14 +91,13 @@ export async function POST(req: Request) {
 
     console.log("Invitation created:", invite[0].id)
 
-    // Return the plaintext code (only shown once!)
     return NextResponse.json({
       success: true,
       code: rawCode,
       id: invite[0].id,
       max_uses: invite[0].max_uses,
       created_at: invite[0].created_at,
-      message: "Code created successfully. Save this code - you won't be able to see it again!"
+      message: "Code created successfully."
     })
   } catch (error) {
     console.error("Invite creation error:", error)

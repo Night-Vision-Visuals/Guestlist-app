@@ -1,13 +1,37 @@
+/**
+ * @file Sidebar.tsx
+ * Main navigation sidebar for the admin dashboard.
+ *
+ * Renders a fixed left-side panel (desktop) or a slide-in drawer (mobile)
+ * containing:
+ *   - Brand header ("NIGHT VISION")
+ *   - Event selector dropdown — switches the active event for all dashboard tabs
+ *   - Navigation links to Applications, Analytics, Invitations, Events, Scanner
+ *   - Logout button (calls POST /api/logout)
+ *
+ * Active route highlighting is handled by comparing `usePathname()` against
+ * each menu item's `href`.
+ *
+ * The sidebar is always rendered inside `EventProvider` (set up in
+ * `dashboard/layout.tsx`), so it can read and write `currentEvent` from context.
+ *
+ * Responsive behaviour:
+ *   - md+ screens: sidebar is always visible (w-64, fixed left)
+ *   - <md screens:  sidebar is hidden by default; a hamburger button (☰) in the
+ *     top-left reveals it as an overlay drawer
+ */
 "use client"
 
 import { usePathname, useRouter } from "next/navigation"
-import { BarChart3, Users, Ticket, LogOut, Menu, X } from "lucide-react"
+import { BarChart3, Users, Ticket, LogOut, Menu, X, CalendarPlus, QrCode } from "lucide-react"
 import { useState } from "react"
+import { useEventContext } from "@/lib/EventContext"
 
 export default function Sidebar() {
   const pathname = usePathname()
   const router = useRouter()
   const [isOpen, setIsOpen] = useState(false)
+  const { currentEvent, events, setCurrentEvent, isLoading: eventsLoading } = useEventContext()
 
   const menuItems = [
     {
@@ -27,6 +51,18 @@ export default function Sidebar() {
       href: "/dashboard/invites",
       icon: Ticket,
       description: "Manage invitation codes"
+    },
+    {
+      label: "Events",
+      href: "/dashboard/events",
+      icon: CalendarPlus,
+      description: "Create & manage events"
+    },
+    {
+      label: "Scanner",
+      href: "/dashboard/scanner",
+      icon: QrCode,
+      description: "QR code door scanner"
     }
   ]
 
@@ -80,6 +116,33 @@ export default function Sidebar() {
             </div>
             <div className="h-px w-12 bg-gradient-to-r from-white to-transparent" />
           </div>
+          {/* Event Selector */}
+          {!eventsLoading && events.length > 0 && (
+            <div className="mt-4">
+              <p className="text-[10px] tracking-[0.25em] uppercase text-neutral-600 font-light mb-2">
+                Current Event
+              </p>
+              <select
+                value={currentEvent?.id || ""}
+                onChange={(e) => {
+                  const selected = events.find((ev) => ev.id === e.target.value)
+                  if (selected) setCurrentEvent(selected)
+                }}
+                className="w-full bg-neutral-900 border border-neutral-800 px-3 py-2 text-white text-[11px] tracking-[0.1em] focus:outline-none focus:border-neutral-600 transition-all duration-300 rounded"
+              >
+                {events.map((event) => (
+                  <option key={event.id} value={event.id} className="bg-black">
+                    {event.name}
+                  </option>
+                ))}
+              </select>
+              {currentEvent && (
+                <p className="text-[10px] tracking-[0.15em] text-neutral-600 font-light mt-1">
+                  {new Date(currentEvent.date + "T12:00:00").toLocaleDateString()}
+                </p>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Navigation Menu */}

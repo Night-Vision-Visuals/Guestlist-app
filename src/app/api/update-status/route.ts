@@ -1,6 +1,31 @@
+/**
+ * @file /api/update-status/route.ts
+ * POST /api/update-status
+ *
+ * Primary status-change endpoint used by the Applications tab action buttons
+ * (Approve, Reject, Waitlist, Cancel).
+ *
+ * Body: { id: string, action: "approve" | "reject" | "waitlist" | "cancelled" }
+ *
+ * Action behaviour:
+ *   "approve"   — checks current approved count; if < 130 sets status "approved"
+ *                 and generates a UUID QR token stored in `qr_token`. If ≥ 130,
+ *                 auto-moves to "waitlist" instead. The QR token powers the
+ *                 /ticket/[token] page the guest uses for door entry.
+ *   "reject"    — sets status "rejected"
+ *   "waitlist"  — sets status "waitlist"
+ *   "cancelled" — sets status "cancelled" (guest-initiated; not treated as no-show)
+ *
+ * The 130-guest cap is hardcoded here. Adjust it if the venue capacity changes.
+ *
+ * Returns { success: true, qr_token? } on success.
+ *
+ * Auth: admin JWT cookie required.
+ */
 import { NextResponse } from "next/server"
 import { supabase } from "@/lib/supabase"
 import { verifyAdminSession } from "@/lib/auth"
+import { v4 as uuidv4 } from "uuid"
 
 export async function POST(req: Request) {
   try {
@@ -21,6 +46,11 @@ export async function POST(req: Request) {
     }
 
     let newStatus = ""
+    let qrToken: string | null = null
+
+    if (action === "cancelled") {
+      newStatus = "cancelled"
+    }
 
     if (action === "approve") {
       // Count approved
@@ -33,6 +63,8 @@ export async function POST(req: Request) {
         newStatus = "waitlist"
       } else {
         newStatus = "approved"
+        // Generate a unique QR token for approved guests
+        qrToken = uuidv4()
       }
     }
 
@@ -44,16 +76,21 @@ export async function POST(req: Request) {
       newStatus = "waitlist"
     }
 
+    const updateData: Record<string, string | null> = { status: newStatus }
+    if (qrToken) {
+      updateData.qr_token = qrToken
+    }
+
     const { error } = await supabase
       .from("applications")
-      .update({ status: newStatus })
+      .update(updateData)
       .eq("id", id)
 
     if (error) {
       return NextResponse.json({ error: "Update failed" }, { status: 500 })
     }
 
-    return NextResponse.json({ success: true })
+    return NextResponse.json({ success: true, qr_token: qrToken })
   } catch (error) {
     console.error("Error:", error)
     return NextResponse.json(

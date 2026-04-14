@@ -29,12 +29,20 @@ export function useCurrentEvent() {
         throw new Error("Failed to fetch events")
       }
 
-      const data = await res.json()
-      setEvents(data || [])
+      const raw: (Event & { event_date?: string })[] = await res.json()
+
+      // The API returns `event_date` but our Event interface uses `date`.
+      // Map here so every consumer gets the correct field.
+      const mapped: Event[] = (raw || []).map((e) => ({
+        ...e,
+        date: e.event_date ?? e.date ?? "",
+      }))
+
+      setEvents(mapped)
 
       // Set current event to most recent one
-      if (data && data.length > 0) {
-        setCurrentEvent(data[0])
+      if (mapped.length > 0) {
+        setCurrentEvent(mapped[0])
       }
 
       setError("")

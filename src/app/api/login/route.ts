@@ -1,3 +1,26 @@
+/**
+ * @file /api/login/route.ts
+ * POST /api/login
+ *
+ * Authenticates an admin user and establishes a session via a JWT cookie.
+ *
+ * Flow:
+ *  1. Receive `{ username, password }` from the admin login form.
+ *  2. Look up the admin record in the `admins` table by username.
+ *  3. Compare the submitted password against the stored bcrypt hash.
+ *  4. On match, sign a JWT (`jose` / `jsonwebtoken`) containing
+ *     `{ adminId, username }` with the `JWT_SECRET` env variable (1 day TTL).
+ *  5. Store the token in an HTTP-only, SameSite=Strict cookie named `admin_token`.
+ *  6. Return `{ success: true }` — the frontend redirects to `/dashboard`.
+ *
+ * The HTTP-only cookie prevents JavaScript access and XSS token theft.
+ * The SameSite=Strict attribute mitigates CSRF attacks.
+ *
+ * Error codes:
+ *   400 — missing username or password
+ *   401 — wrong credentials (message is deliberately vague for security)
+ *   500 — JWT_SECRET not configured or other server error
+ */
 import { NextResponse } from "next/server"
 import { supabase } from "@/lib/supabase"
 import bcrypt from "bcryptjs"

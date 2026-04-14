@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
+import { useEventContext } from "@/lib/EventContext"
 
 interface Admin {
   id: string
@@ -15,31 +16,63 @@ interface Invitation {
   current_uses: number
   redeemed: boolean
   revoked_at: string | null
+  declined_at: string | null
   created_at: string
   created_by_admin_id: string
+  event_id: string | null
+  invite_type: string | null
   admin: Admin | null
+}
+
+function copyToClipboard(text: string): Promise<void> {
+  if (navigator.clipboard && window.isSecureContext) {
+    return navigator.clipboard.writeText(text)
+  }
+  // Fallback for HTTP (non-secure) contexts
+  return new Promise((resolve, reject) => {
+    const ta = document.createElement("textarea")
+    ta.value = text
+    ta.style.position = "fixed"
+    ta.style.opacity = "0"
+    document.body.appendChild(ta)
+    ta.focus()
+    ta.select()
+    const ok = document.execCommand("copy")
+    document.body.removeChild(ta)
+    ok ? resolve() : reject(new Error("execCommand copy failed"))
+  })
 }
 
 export default function InvitesPage() {
   const router = useRouter()
+  const { currentEvent, isLoading: eventsLoading } = useEventContext()
   const [invites, setInvites] = useState<Invitation[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState("")
   const [success, setSuccess] = useState("")
   const [showCreateForm, setShowCreateForm] = useState(false)
   const [isCreating, setIsCreating] = useState(false)
+  const [generatedCode, setGeneratedCode] = useState<string | null>(null)
+  const [copied, setCopied] = useState(false)
   const [formData, setFormData] = useState({
-    max_uses: 1
+    max_uses: 1,
+    invite_type: "guestlist"
   })
 
   useEffect(() => {
-    fetchInvites()
-  }, [])
+    if (currentEvent) {
+      fetchInvites(currentEvent.id)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentEvent])
 
-  const fetchInvites = async () => {
+  const fetchInvites = async (eventId?: string) => {
     try {
       setIsLoading(true)
-      const res = await fetch("/api/invite/list", {
+      const url = eventId
+        ? `/api/invite/list?eventId=${eventId}`
+        : "/api/invite/list"
+      const res = await fetch(url, {
         credentials: "include"
       })
 
@@ -74,7 +107,9 @@ export default function InvitesPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          max_uses: parseInt(formData.max_uses.toString())
+          max_uses: parseInt(formData.max_uses.toString()),
+          invite_type: formData.invite_type,
+          event_id: currentEvent?.id || null
         }),
         credentials: "include"
       })
@@ -85,20 +120,29 @@ export default function InvitesPage() {
         throw new Error(data.error || "Failed to create invitation")
       }
 
-      setSuccess(`Code created: ${data.code}`)
-      setFormData({ max_uses: 1 })
+      setGeneratedCode(data.code)
+      setFormData({ max_uses: 1, invite_type: "guestlist" })
       setShowCreateForm(false)
-      
-      // Copy code to clipboard
-      navigator.clipboard.writeText(data.code)
-      
+
+      // Copy code to clipboard automatically
+      copyToClipboard(data.code).then(() => setCopied(true)).catch(() => {})
+
       // Refresh invites list
-      fetchInvites()
+      fetchInvites(currentEvent?.id)
     } catch (err) {
       console.error(err)
       setError(err instanceof Error ? err.message : "Failed to create invitation")
     } finally {
       setIsCreating(false)
+    }
+  }
+
+  const handleCopyCode = () => {
+    if (generatedCode) {
+      copyToClipboard(generatedCode).then(() => {
+        setCopied(true)
+        setTimeout(() => setCopied(false), 2000)
+      }).catch(() => {})
     }
   }
 
@@ -123,10 +167,31 @@ export default function InvitesPage() {
 
       setSuccess("Invitation code revoked")
       setError("")
-      fetchInvites()
+      fetchInvites(currentEvent?.id)
     } catch (err) {
       console.error(err)
       setError(err instanceof Error ? err.message : "Error revoking invitation")
+    }
+  }
+
+  const handleDeleteInvite = async (id: string) => {
+    try {
+      const res = await fetch("/api/invite/delete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id }),
+        credentials: "include"
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to delete invitation")
+      }
+      setSuccess("Invitation code deleted")
+      setError("")
+      fetchInvites(currentEvent?.id)
+    } catch (err) {
+      console.error(err)
+      setError(err instanceof Error ? err.message : "Error deleting invitation")
     }
   }
 
@@ -137,6 +202,9 @@ export default function InvitesPage() {
   const getStatusColor = (invite: Invitation) => {
     if (invite.revoked_at) {
       return "text-red-400"
+    }
+    if (invite.declined_at) {
+      return "text-purple-400"
     }
     if (invite.redeemed) {
       return "text-yellow-400"
@@ -151,6 +219,9 @@ export default function InvitesPage() {
     if (invite.revoked_at) {
       return "Revoked"
     }
+    if (invite.declined_at) {
+      return "Declined"
+    }
     if (invite.redeemed) {
       return "Fully Used"
     }
@@ -160,7 +231,7 @@ export default function InvitesPage() {
     return "Active"
   }
 
-  if (isLoading) {
+  if (eventsLoading || isLoading) {
     return (
       <div className="min-h-screen bg-black text-white overflow-hidden">
         <div className="fixed inset-0 z-0">
@@ -187,6 +258,52 @@ export default function InvitesPage() {
         <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-white/5 rounded-full blur-3xl opacity-20 animate-pulse" />
       </div>
 
+      {/* Generated Code Modal */}
+      {generatedCode && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+            onClick={() => setGeneratedCode(null)}
+          />
+          {/* Modal */}
+          <div className="relative z-10 flex flex-col items-center gap-8 px-12 py-12 border border-neutral-700 bg-neutral-900/90 rounded-2xl shadow-2xl max-w-md w-full mx-4">
+            <div className="space-y-2 text-center">
+              <p className="text-[10px] tracking-[0.4em] uppercase text-neutral-500 font-light">
+                Invitation Code Created
+              </p>
+              <div className="h-px w-16 mx-auto bg-gradient-to-r from-transparent via-white/30 to-transparent" />
+            </div>
+
+            <button
+              onClick={handleCopyCode}
+              title="Click to copy"
+              className="group relative flex flex-col items-center gap-3 cursor-pointer select-none"
+            >
+              <div className="border border-neutral-700 group-hover:border-white/50 bg-black/60 group-hover:bg-neutral-800/60 transition-all duration-300 px-10 py-6 rounded-xl">
+                <p className="text-5xl font-mono font-light tracking-[0.3em] text-white">
+                  {generatedCode}
+                </p>
+              </div>
+              <span className="text-[10px] tracking-[0.3em] uppercase text-neutral-500 group-hover:text-neutral-300 transition-colors duration-300">
+                {copied ? "✓ Copied!" : "Click to copy"}
+              </span>
+            </button>
+
+            <p className="text-[11px] tracking-[0.15em] text-neutral-600 text-center max-w-xs">
+              Share this code with your guest.
+            </p>
+
+            <button
+              onClick={() => setGeneratedCode(null)}
+              className="px-8 py-2 border border-neutral-800 hover:border-neutral-600 text-neutral-400 hover:text-white text-xs tracking-[0.2em] uppercase rounded transition-all duration-300"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Content */}
       <div className="relative z-10">
         {/* Top Navigation */}
@@ -203,7 +320,7 @@ export default function InvitesPage() {
                 {invites.length} Codes
               </div>
               <div className="text-[10px] tracking-[0.2em] uppercase text-neutral-600 font-light mt-1">
-                Invitation Management
+                {currentEvent?.name || "Invitation Management"}
               </div>
             </div>
           </div>
@@ -219,7 +336,9 @@ export default function InvitesPage() {
               </span>
             </h1>
             <p className="text-neutral-400 text-sm tracking-[0.2em] uppercase font-light">
-              Create and manage invitation codes
+              {currentEvent
+                ? `${currentEvent.name} — ${new Date(currentEvent.date + "T12:00:00").toLocaleDateString()}`
+                : "Create and manage invitation codes"}
             </p>
             <div className="h-px bg-gradient-to-r from-white/40 to-transparent w-20" />
           </div>
@@ -250,6 +369,24 @@ export default function InvitesPage() {
             <div className="mb-12 border border-neutral-800 p-6 rounded-lg">
               <h2 className="text-xl font-light mb-6">Create New Invitation Code</h2>
               <form onSubmit={handleCreateInvite} className="space-y-6">
+                <div>
+                  <label className="text-xs tracking-[0.2em] uppercase text-neutral-500 mb-2 block">
+                    Invite Type
+                  </label>
+                  <select
+                    value={formData.invite_type}
+                    onChange={(e) => setFormData({ ...formData, invite_type: e.target.value })}
+                    required
+                    className="w-full bg-transparent border-b border-neutral-800 px-0 py-3 text-white focus:outline-none focus:border-neutral-600 transition-all duration-300 text-sm"
+                  >
+                    <option value="guestlist" className="bg-black">📋 Guestlist</option>
+                    <option value="friend" className="bg-black">🤝 Friend</option>
+                    <option value="vip" className="bg-black">💎 VIP</option>
+                    <option value="instagram" className="bg-black">📸 Instagram</option>
+                    <option value="whatsapp" className="bg-black">💬 WhatsApp</option>
+                    <option value="socialmedia" className="bg-black">🌐 Social Media</option>
+                  </select>
+                </div>
                 <div>
                   <label className="text-xs tracking-[0.2em] uppercase text-neutral-500 mb-2 block">
                     Maximum Uses (1-100)
@@ -292,49 +429,42 @@ export default function InvitesPage() {
                 >
                   <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mb-4">
                     <div>
-                      <p className="text-xs tracking-[0.2em] uppercase text-neutral-500 mb-2">
-                        ID
-                      </p>
-                      <p className="text-white font-mono text-sm">{invite.id.substring(0, 8)}...</p>
+                      <p className="text-xs tracking-[0.2em] uppercase text-neutral-500 mb-2">Code</p>
+                      <p className="text-white font-mono text-sm tracking-[0.2em]">{invite.code_hash}</p>
+                      {invite.invite_type && (
+                        <p className="text-xs text-neutral-500 mt-1 capitalize">{invite.invite_type}</p>
+                      )}
                     </div>
 
                     <div>
-                      <p className="text-xs tracking-[0.2em] uppercase text-neutral-500 mb-2">
-                        Status
-                      </p>
+                      <p className="text-xs tracking-[0.2em] uppercase text-neutral-500 mb-2">Status</p>
                       <p className={`font-light text-sm tracking-[0.15em] uppercase ${getStatusColor(invite)}`}>
                         {getStatusText(invite)}
                       </p>
                     </div>
 
                     <div>
-                      <p className="text-xs tracking-[0.2em] uppercase text-neutral-500 mb-2">
-                        Usage
-                      </p>
+                      <p className="text-xs tracking-[0.2em] uppercase text-neutral-500 mb-2">Usage</p>
                       <p className="text-white font-light">
                         {invite.current_uses} / {invite.max_uses}
                       </p>
                       <div className="w-full bg-neutral-800 rounded-full h-1 mt-2">
                         <div
-                          className="bg-emerald-600 h-1 rounded-full transition-all duration-300"
+                          className="bg-cyan-600 h-1 rounded-full transition-all duration-300"
                           style={{ width: `${getUsagePercentage(invite.current_uses, invite.max_uses)}%` }}
                         />
                       </div>
                     </div>
 
                     <div>
-                      <p className="text-xs tracking-[0.2em] uppercase text-neutral-500 mb-2">
-                        Created By
-                      </p>
+                      <p className="text-xs tracking-[0.2em] uppercase text-neutral-500 mb-2">Created By</p>
                       <p className="text-white font-light text-sm">
                         {invite.admin?.username || "Unknown"}
                       </p>
                     </div>
 
                     <div>
-                      <p className="text-xs tracking-[0.2em] uppercase text-neutral-500 mb-2">
-                        Created
-                      </p>
+                      <p className="text-xs tracking-[0.2em] uppercase text-neutral-500 mb-2">Created</p>
                       <p className="text-white font-light text-sm">
                         {new Date(invite.created_at).toLocaleDateString()}
                       </p>
@@ -342,16 +472,26 @@ export default function InvitesPage() {
                   </div>
 
                   {/* Action Buttons */}
-                  {!invite.revoked_at && !invite.redeemed && (
-                    <div className="border-t border-neutral-800 pt-4 flex gap-3">
+                  <div className="border-t border-neutral-800 pt-4 flex gap-3">
+                    {!invite.revoked_at && !invite.redeemed && (
                       <button
                         onClick={() => handleRevokeInvite(invite.id)}
                         className="px-4 py-2 text-xs tracking-[0.2em] uppercase text-red-400 border border-red-400/30 hover:border-red-400 hover:bg-red-400/5 transition-all duration-300 rounded"
                       >
                         Revoke
                       </button>
-                    </div>
-                  )}
+                    )}
+                    <button
+                      onClick={() => {
+                        if (confirm("Delete this invitation code permanently? This cannot be undone.")) {
+                          handleDeleteInvite(invite.id)
+                        }
+                      }}
+                      className="px-4 py-2 text-xs tracking-[0.2em] uppercase text-neutral-500 border border-neutral-800 hover:border-red-400/50 hover:text-red-400 transition-all duration-300 rounded"
+                    >
+                      Delete
+                    </button>
+                  </div>
                 </div>
               ))
             )}

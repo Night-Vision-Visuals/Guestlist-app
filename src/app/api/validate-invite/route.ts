@@ -1,6 +1,29 @@
+/**
+ * @file /api/validate-invite/route.ts
+ * POST /api/validate-invite
+ *
+ * Public endpoint called from the guest login page (/login) immediately after
+ * the user enters a 6-character code. It validates the code before showing
+ * the full application form, so guests get instant feedback without having to
+ * fill in all their details first.
+ *
+ * Body: { code: string }
+ *
+ * Validation steps:
+ *  1. Find the code by exact plain-text match in `invite_codes.code_hash`
+ *     (codes are always stored and compared in uppercase).
+ *  2. Reject if `redeemed = true` (covers both revoked codes and fully-used codes).
+ *  3. Reject if `current_uses >= max_uses` (marks as redeemed as a side effect).
+ *  4. Return `{ success: true }` if all checks pass.
+ *
+ * No auth required — this is called by guests who don't have an admin session.
+ *
+ * Error codes:
+ *   400 — code is revoked or has no uses remaining
+ *   401 — code does not exist
+ */
 import { NextResponse } from "next/server"
 import { supabase } from "@/lib/supabase"
-import bcrypt from "bcryptjs"
 
 export async function POST(req: Request) {
   try {
@@ -12,44 +35,19 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "No code provided" }, { status: 400 })
     }
 
-    // Fetch all invitation codes
-    const { data: invitations, error: fetchError } = await supabase
+    // Find the invitation code using plain text comparison
+    const { data: matchedInvitation, error: fetchError } = await supabase
       .from("invite_codes")
-      .select("id, code_hash, redeemed, current_uses, max_uses")
+      .select("id, code_hash, redeemed, current_uses, max_uses, event_id")
+      .eq("code_hash", code.toUpperCase())
+      .single()
 
-    if (fetchError) {
-      console.error("Error fetching invitations:", fetchError)
-      return NextResponse.json({ error: "Server error" }, { status: 500 })
-    }
-
-    if (!invitations || invitations.length === 0) {
-      console.log("No invitations found in database")
-      return NextResponse.json({ error: "Invalid code" }, { status: 401 })
-    }
-
-    console.log(`Found ${invitations.length} invitations to check`)
-
-    // Find matching code hash
-    let matchedInvitation = null
-    for (const invite of invitations) {
-      try {
-        const valid = await bcrypt.compare(code, invite.code_hash)
-        if (valid) {
-          matchedInvitation = invite
-          console.log("Code matched:", { id: invite.id, redeemed: invite.redeemed, current_uses: invite.current_uses, max_uses: invite.max_uses })
-          break
-        }
-      } catch (bcryptError) {
-        console.error("Bcrypt comparison error:", bcryptError)
-        continue
-      }
-    }
-
-    // Code not found
-    if (!matchedInvitation) {
+    if (fetchError || !matchedInvitation) {
       console.log("No matching code found")
       return NextResponse.json({ error: "Invalid code" }, { status: 401 })
     }
+
+    console.log("Code matched:", { id: matchedInvitation.id, redeemed: matchedInvitation.redeemed, current_uses: matchedInvitation.current_uses, max_uses: matchedInvitation.max_uses })
 
     // Check if code is already redeemed (all uses consumed)
     if (matchedInvitation.redeemed) {
@@ -63,15 +61,10 @@ export async function POST(req: Request) {
     // Check if code has reached max uses
     if (matchedInvitation.current_uses >= matchedInvitation.max_uses) {
       console.log("Max uses reached, marking as redeemed")
-      // Mark as redeemed since max uses reached
-      const { error: updateError } = await supabase
+      await supabase
         .from("invite_codes")
         .update({ redeemed: true })
         .eq("id", matchedInvitation.id)
-
-      if (updateError) {
-        console.error("Error updating invitation code:", updateError)
-      }
 
       return NextResponse.json(
         { error: "This invitation code has reached its maximum uses" },
@@ -79,9 +72,20 @@ export async function POST(req: Request) {
       )
     }
 
-    // Code is valid and has uses remaining
+    // Code is valid and has uses remaining — fetch event data to return to guest
     console.log("Code valid, uses remaining")
-    return NextResponse.json({ success: true })
+
+    let eventData = null
+    if (matchedInvitation.event_id) {
+      const { data: event } = await supabase
+        .from("events")
+        .select("name, event_date, description, poster_url, guest_limit, min_age, max_age")
+        .eq("id", matchedInvitation.event_id)
+        .single()
+      eventData = event
+    }
+
+    return NextResponse.json({ success: true, event: eventData })
   } catch (error) {
     console.error("Validate invite error:", error)
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })

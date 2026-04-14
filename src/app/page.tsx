@@ -137,11 +137,23 @@ export default function LandingPage() {
         className="fixed inset-0 z-0"
         style={{ background: "linear-gradient(135deg, rgba(0,0,0,1) 0%, rgba(10,10,20,0.9) 100%)" }}
       />
+      {/* 🎥 Background Video */}
+        <video
+        autoPlay
+        loop
+        muted
+        playsInline
+        className="fixed w-full h-full overflow-hidden object-cover"
+      >
+        <source src="/video/bg.mp4" type="video/mp4" />
+      </video>
+      {/* 🌑 Dark overlay for readability */}
+      <div className="fixed inset-0 bg-black/88" />
 
       {/* Content */}
       <div className="relative z-10">
         {/* Navigation */}
-        <nav className="flex justify-between items-center px-6 md:px-16 py-8 border-b border-neutral-800/50">
+        <nav className="flex justify-between items-center px-6 md:px-16 py-8 border-b border-neutral-800/50 backdrop-blur-sm">
           <div className="flex items-center gap-3">
             <Image
               src="/logo.png"
@@ -153,7 +165,7 @@ export default function LandingPage() {
             <div className="h-px w-12 bg-gradient-to-r from-white to-transparent" />
           </div>
 
-          <div className="flex items-center gap-6">
+          <div className="flex items-center gap-6 ">
             <a
               href="https://instagram.com/nightvision_raw"
               target="_blank"
@@ -170,6 +182,8 @@ export default function LandingPage() {
             </Link>
           </div>
         </nav>
+
+
 
         {/* Hero Section */}
         <div className="min-h-screen flex flex-col justify-center items-center px-6 md:px-16 py-20 text-center">
@@ -188,7 +202,7 @@ export default function LandingPage() {
           </div>
 
           {/* Divider */}
-          <div className="w-20 h-px bg-gradient-to-r from-transparent via-emerald-400 to-transparent mb-12" />
+          <div className="w-20 h-px bg-gradient-to-r from-transparent via-neutral-400 to-transparent mb-12" />
 
           
 
@@ -196,7 +210,7 @@ export default function LandingPage() {
           <div className="flex flex-col md:flex-row gap-6 mb-20">
             <Link
               href="/login"
-              className="group relative px-8 md:px-12 py-4 bg-emerald-600 hover:bg-emerald-500 text-white font-light tracking-[0.2em] uppercase text-sm rounded-lg transition-all duration-300 flex items-center justify-center gap-3"
+              className="group relative px-8 md:px-12 py-4 bg-neutral-600 hover:bg-neutral-500 text-white font-light tracking-[0.2em] uppercase text-sm rounded-lg transition-all duration-300 flex items-center justify-center gap-3"
             >
               Access Now
               <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform duration-300" />
@@ -205,7 +219,7 @@ export default function LandingPage() {
               href="https://instagram.com/nightvision_raw"
               target="_blank"
               rel="noopener noreferrer"
-              className="group relative px-8 md:px-12 py-4 border-2 border-emerald-400 text-emerald-400 font-light tracking-[0.2em] uppercase text-sm rounded-lg hover:bg-emerald-400 hover:text-black transition-all duration-300"
+              className="group relative px-8 md:px-12 py-4 border-2 border-neutral-400 text-neutral-400 font-light tracking-[0.2em] uppercase text-sm rounded-lg hover:bg-neutral-400 hover:text-black transition-all duration-300"
             >
               Follow Us
             </Link>
@@ -213,8 +227,8 @@ export default function LandingPage() {
 
           {/* Features Grid */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 w-full max-w-4xl">
-            <div className="group border border-neutral-800 p-8 rounded-lg hover:border-emerald-400/50 hover:bg-emerald-400/5 transition-all duration-300 backdrop-blur-sm">
-              <Users size={24} className="text-emerald-400 mb-4 group-hover:scale-110 transition-transform duration-300" />
+            <div className="group border border-neutral-800 p-8 rounded-lg hover:border-neutral-400/50 hover:bg-neutral-400/5 transition-all duration-300 backdrop-blur-sm">
+              <Users size={24} className="text-neutral-400 mb-4 group-hover:scale-110 transition-transform duration-300" />
               <h3 className="text-lg font-light tracking-[0.15em] uppercase mb-2">
                 Curated
               </h3>
@@ -223,8 +237,8 @@ export default function LandingPage() {
               </p>
             </div>
 
-            <div className="group border border-neutral-800 p-8 rounded-lg hover:border-emerald-400/50 hover:bg-emerald-400/5 transition-all duration-300 backdrop-blur-sm">
-              <Zap size={24} className="text-emerald-400 mb-4 group-hover:scale-110 transition-transform duration-300" />
+            <div className="group border border-neutral-800 p-8 rounded-lg hover:border-neutral-400/50 hover:bg-neutral-400/5 transition-all duration-300 backdrop-blur-sm">
+              <Zap size={24} className="text-neutral-400 mb-4 group-hover:scale-110 transition-transform duration-300" />
               <h3 className="text-lg font-light tracking-[0.15em] uppercase mb-2">
                 Fast
               </h3>
@@ -233,8 +247,8 @@ export default function LandingPage() {
               </p>
             </div>
 
-            <div className="group border border-neutral-800 p-8 rounded-lg hover:border-emerald-400/50 hover:bg-emerald-400/5 transition-all duration-300 backdrop-blur-sm">
-              <Music size={24} className="text-emerald-400 mb-4 group-hover:scale-110 transition-transform duration-300" />
+            <div className="group border border-neutral-800 p-8 rounded-lg hover:border-neutral-400/50 hover:bg-neutral-400/5 transition-all duration-300 backdrop-blur-sm">
+              <Music size={24} className="text-neutral-400 mb-4 group-hover:scale-110 transition-transform duration-300" />
               <h3 className="text-lg font-light tracking-[0.15em] uppercase mb-2">
                 Experience
               </h3>
@@ -296,7 +310,7 @@ export default function LandingPage() {
                 href="https://instagram.com/nightvision_raw"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-neutral-600 hover:text-emerald-400 text-sm font-light transition-colors duration-300"
+                className="text-neutral-600 hover:text-neutral-400 text-sm font-light transition-colors duration-300"
               >
                 @nightvision_raw
               </a>

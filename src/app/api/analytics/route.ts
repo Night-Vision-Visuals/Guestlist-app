@@ -1,3 +1,22 @@
+/**
+ * @file /api/analytics/route.ts
+ * GET /api/analytics?eventId=<uuid>
+ *
+ * Returns aggregated statistics for a single event. All calculations are done
+ * server-side from the raw `applications` and `invite_codes` rows so the client
+ * never sees individual guest records through this endpoint.
+ *
+ * Response includes:
+ *   - Application counts by status (total, approved, rejected, waitlist, pending,
+ *     cancelled, checked-in, approval rate %)
+ *   - Gender distribution (male / female / diverse counts + percentages)
+ *   - Average guest age (calculated from `date_of_birth`)
+ *   - "Heard about us" distribution (breakdown by source)
+ *   - Invite code stats (total codes, total uses capacity, actual uses, usage %)
+ *   - Applications grouped by calendar day (for the timeline chart)
+ *
+ * Auth: admin JWT cookie required.
+ */
 import { NextResponse } from "next/server"
 import { supabase } from "@/lib/supabase"
 import { verifyAdminSession } from "@/lib/auth"
@@ -60,11 +79,38 @@ export async function GET(req: Request) {
     const rejected = applications?.filter((app: any) => app.status === "rejected").length || 0
     const waitlist = applications?.filter((app: any) => app.status === "waitlist").length || 0
     const pending = applications?.filter((app: any) => app.status === "applied").length || 0
+    const cancelled = applications?.filter((app: any) => app.status === "cancelled").length || 0
+    const checkedIn = applications?.filter((app: any) => app.checked_in).length || 0
+
+    // Gender statistics
+    const male = applications?.filter((app: any) => app.gender === "male").length || 0
+    const female = applications?.filter((app: any) => app.gender === "female").length || 0
+    const diverse = applications?.filter((app: any) => app.gender === "diverse").length || 0
+
+    // Average age calculation
+    const calculateAge = (dob: string) => {
+      const today = new Date()
+      const birth = new Date(dob)
+      let age = today.getFullYear() - birth.getFullYear()
+      const m = today.getMonth() - birth.getMonth()
+      if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--
+      return age
+    }
+    const ages = applications?.filter((app: any) => app.date_of_birth).map((app: any) => calculateAge(app.date_of_birth)) || []
+    const averageAge = ages.length > 0 ? Math.round(ages.reduce((a: number, b: number) => a + b, 0) / ages.length) : 0
+
+    // Heard about us distribution
+    const heardAboutUs: { [key: string]: number } = {}
+    applications?.forEach((app: any) => {
+      if (app.heard_about_us) {
+        heardAboutUs[app.heard_about_us] = (heardAboutUs[app.heard_about_us] || 0) + 1
+      }
+    })
 
     // Fetch invitation code stats
     const { data: inviteCodes, error: inviteError } = await supabase
       .from("invite_codes")
-      .select("id, max_uses, current_uses, created_at")
+      .select("id, max_uses, current_uses, created_at, declined_at")
 
     if (inviteError) {
       console.error("Error fetching invite codes:", inviteError)
@@ -73,6 +119,7 @@ export async function GET(req: Request) {
     const totalInviteCodes = inviteCodes?.length || 0
     const totalInvitesGenerated = inviteCodes?.reduce((sum: number, code: any) => sum + code.max_uses, 0) || 0
     const totalInvitesUsed = inviteCodes?.reduce((sum: number, code: any) => sum + code.current_uses, 0) || 0
+    const totalDeclined = inviteCodes?.filter((code: any) => code.declined_at != null).length || 0
 
     // Get applications by day (for chart)
     const applicationsByDay: { [key: string]: number } = {}
@@ -89,12 +136,25 @@ export async function GET(req: Request) {
         rejected,
         waitlist,
         pending,
+        cancelled,
+        checkedIn,
         approvalRate: totalApplications > 0 ? Math.round((approved / totalApplications) * 100) : 0
       },
+      genderStats: {
+        male,
+        female,
+        diverse,
+        malePercent: totalApplications > 0 ? Math.round((male / totalApplications) * 100) : 0,
+        femalePercent: totalApplications > 0 ? Math.round((female / totalApplications) * 100) : 0,
+        diversePercent: totalApplications > 0 ? Math.round((diverse / totalApplications) * 100) : 0,
+        averageAge
+      },
+      heardAboutUs,
       inviteStats: {
         totalCodes: totalInviteCodes,
         totalGenerated: totalInvitesGenerated,
         totalUsed: totalInvitesUsed,
+        totalDeclined,
         usageRate: totalInvitesGenerated > 0 ? Math.round((totalInvitesUsed / totalInvitesGenerated) * 100) : 0
       },
       applicationsByDay
