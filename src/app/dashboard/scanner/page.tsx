@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback } from "react"
 import { BrowserQRCodeReader, IScannerControls } from "@zxing/browser"
+import { DecodeHintType, BarcodeFormat } from "@zxing/library"
 
 interface CheckInResult {
   success?: boolean
@@ -15,18 +16,12 @@ interface CheckInResult {
   }
 }
 
-/**
- * Safely convert ANY thrown value to a lowercase string.
- * Never throws, never returns undefined.
- */
 function errMsg(err: unknown): string {
   try {
     if (err == null) return ""
     if (typeof err === "string") return err.toLowerCase()
     if (typeof err === "number" || typeof err === "boolean") return String(err).toLowerCase()
-    if (err instanceof Error) {
-      return (err.message ?? err.name ?? String(err)).toLowerCase()
-    }
+    if (err instanceof Error) return (err.message ?? err.name ?? String(err)).toLowerCase()
     if (typeof err === "object") {
       const o = err as Record<string, unknown>
       if (typeof o["message"] === "string") return o["message"].toLowerCase()
@@ -45,34 +40,27 @@ function errMsg(err: unknown): string {
 
 export default function ScannerPage() {
   const videoRef = useRef<HTMLVideoElement>(null)
+  const canvasRef = useRef<HTMLCanvasElement>(null)
   const controlsRef = useRef<IScannerControls | null>(null)
+  const invertLoopRef = useRef<number | null>(null)
   const [scanning, setScanning] = useState(false)
   const [result, setResult] = useState<CheckInResult | null>(null)
   const [isProcessing, setIsProcessing] = useState(false)
   const [error, setError] = useState("")
-  const [debugText, setDebugText] = useState<string>("")
-  const [manualToken, setManualToken] = useState("")
 
-  // All deduplication guards are refs — never state — so there is no stale
-  // closure problem inside the long-lived decodeFromVideoDevice callback.
+  // Refs for deduplication — never state, avoids stale closure inside camera callback
   const processingRef = useRef(false)
   const lastScannedRef = useRef<string>("")
 
   // ── Core check-in logic ────────────────────────────────────────────────────
-  // Accepts either a raw UUID token or a full QR URL like
-  //   https://…/ticket/<uuid>
-  // Extracted as a standalone async fn so it can be called from both the
-  // camera callback and the manual-input form.
   const runCheckin = useCallback(async (rawText: string) => {
     if (!rawText.trim()) return
 
-    // Extract UUID from URL if needed
     let token = rawText.trim()
     if (token.includes("/ticket/")) {
       token = token.split("/ticket/")[1]?.split("?")[0] || token
     }
 
-    setDebugText(`Raw: ${rawText} → Token: ${token}`)
     setIsProcessing(true)
     setResult(null)
 
@@ -87,7 +75,6 @@ export default function ScannerPage() {
       const data: CheckInResult = await res.json()
       setResult(data)
 
-      // Auto-clear after 5 s so the scanner is ready for the next guest
       setTimeout(() => {
         setResult(null)
         lastScannedRef.current = ""
@@ -106,43 +93,86 @@ export default function ScannerPage() {
   }, [])
 
   // ── Camera QR callback ─────────────────────────────────────────────────────
-  // Uses only refs for guards → no stale-closure issues.
   const processQrCode = useCallback(
     (text: string) => {
-      // Guard 1: already processing a previous scan
       if (processingRef.current) return
-      // Guard 2: same text as the one we just processed (debounce repeated frames)
       if (text === lastScannedRef.current) return
-
       processingRef.current = true
       lastScannedRef.current = text
-
       runCheckin(text)
     },
     [runCheckin],
   )
 
-  // ── Manual submit ──────────────────────────────────────────────────────────
-  const handleManualSubmit = useCallback(
-    (e: React.FormEvent) => {
-      e.preventDefault()
-      if (!manualToken.trim() || processingRef.current) return
-      processingRef.current = true
-      lastScannedRef.current = manualToken.trim()
-      runCheckin(manualToken.trim())
-      setManualToken("")
+  // ── Inverted-frame reader loop ─────────────────────────────────────────────
+  // @zxing/library in this version has no ALSO_INVERTED hint, so we manually
+  // draw each video frame onto a hidden canvas, invert its pixels, then run a
+  // second BrowserQRCodeReader decode attempt on that canvas image.
+  const startInvertLoop = useCallback(
+    (invertReader: BrowserQRCodeReader) => {
+      const video = videoRef.current
+      const canvas = canvasRef.current
+      if (!video || !canvas) return
+
+      const ctx = canvas.getContext("2d", { willReadFrequently: true })
+      if (!ctx) return
+
+      const tick = async () => {
+        if (!processingRef.current && video.readyState >= 2) {
+          const w = video.videoWidth || 640
+          const h = video.videoHeight || 480
+          canvas.width = w
+          canvas.height = h
+
+          // Draw current frame
+          ctx.drawImage(video, 0, 0, w, h)
+
+          // Invert pixels
+          const imageData = ctx.getImageData(0, 0, w, h)
+          const data = imageData.data
+          for (let i = 0; i < data.length; i += 4) {
+            data[i] = 255 - data[i]         // R
+            data[i + 1] = 255 - data[i + 1] // G
+            data[i + 2] = 255 - data[i + 2] // B
+            // alpha unchanged
+          }
+          ctx.putImageData(imageData, 0, 0)
+
+          // Try to decode the inverted frame
+          try {
+            const result = await invertReader.decodeFromCanvas(canvas)
+            if (result) processQrCode(result.getText())
+          } catch {
+            // NotFoundException fires on every frame with no code — normal, ignore
+          }
+        }
+
+        invertLoopRef.current = requestAnimationFrame(tick)
+      }
+
+      invertLoopRef.current = requestAnimationFrame(tick)
     },
-    [manualToken, runCheckin],
+    [processQrCode],
   )
 
-  // ── Start / stop camera ────────────────────────────────────────────────────
+  // ── Start camera ───────────────────────────────────────────────────────────
   const startScanner = useCallback(async () => {
     if (!videoRef.current) return
     setError("")
-    setDebugText("")
 
     try {
-      const codeReader = new BrowserQRCodeReader()
+      // Primary reader: normal (black on white) QR codes with TRY_HARDER
+      const hints = new Map()
+      hints.set(DecodeHintType.POSSIBLE_FORMATS, [BarcodeFormat.QR_CODE])
+      hints.set(DecodeHintType.TRY_HARDER, true)
+
+      const codeReader = new BrowserQRCodeReader(hints)
+
+      // Secondary reader: used only for the inverted-pixel canvas frames
+      const invertHints = new Map()
+      invertHints.set(DecodeHintType.POSSIBLE_FORMATS, [BarcodeFormat.QR_CODE])
+      invertHints.set(DecodeHintType.TRY_HARDER, true)
+      const invertReader = new BrowserQRCodeReader(invertHints)
 
       let deviceId: string | undefined
       try {
@@ -150,16 +180,14 @@ export default function ScannerPage() {
         const rear = devices.find((d) => /back|rear|environment/i.test(d.label ?? ""))
         deviceId = rear?.deviceId ?? devices[0]?.deviceId
       } catch {
-        // Permission not yet granted — fall through and let zxing pick default
+        // Permission not yet granted — fall through
       }
 
       const controls = await codeReader.decodeFromVideoDevice(
         deviceId,
         videoRef.current,
         (res, err) => {
-          if (res) {
-            processQrCode(res.getText())
-          }
+          if (res) processQrCode(res.getText())
           if (err) {
             const msg = errMsg(err)
             if (!msg.includes("notfound") && !msg.includes("exception")) {
@@ -171,6 +199,9 @@ export default function ScannerPage() {
 
       controlsRef.current = controls
       setScanning(true)
+
+      // Start the parallel inverted-frame loop
+      startInvertLoop(invertReader)
     } catch (err) {
       console.error("Scanner start error:", err)
       const message = errMsg(err)
@@ -187,16 +218,20 @@ export default function ScannerPage() {
         setError(`Could not start camera. Please ensure camera access is allowed${message ? ` (${message})` : ""}.`)
       }
     }
-  }, [processQrCode])
+  }, [processQrCode, startInvertLoop])
 
+  // ── Stop camera ────────────────────────────────────────────────────────────
   const stopScanner = useCallback(() => {
+    if (invertLoopRef.current !== null) {
+      cancelAnimationFrame(invertLoopRef.current)
+      invertLoopRef.current = null
+    }
     if (controlsRef.current) {
       try { controlsRef.current.stop() } catch { /* ignore */ }
       controlsRef.current = null
     }
     setScanning(false)
     setResult(null)
-    setDebugText("")
     lastScannedRef.current = ""
     processingRef.current = false
   }, [])
@@ -208,6 +243,9 @@ export default function ScannerPage() {
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen bg-black text-white">
+      {/* Hidden canvas used for inverted-frame decoding */}
+      <canvas ref={canvasRef} className="hidden" aria-hidden="true" />
+
       {/* Background */}
       <div className="fixed inset-0 z-0">
         <div className="absolute inset-0 bg-gradient-to-br from-neutral-900 via-black to-black" />
@@ -314,14 +352,10 @@ export default function ScannerPage() {
             >
               {result.success && result.guest && (
                 <div className="space-y-2">
-                  <p className="text-emerald-400 text-sm tracking-[0.2em] uppercase font-light">
-                    Check-in Successful
-                  </p>
+                  <p className="text-emerald-400 text-sm tracking-[0.2em] uppercase font-light">Check-in Successful</p>
                   <p className="text-white text-xl font-light">{result.guest.name}</p>
                   <p className="text-neutral-400 text-sm">{result.guest.email}</p>
-                  <p className="text-neutral-600 text-xs tracking-[0.1em] uppercase">
-                    {new Date().toLocaleTimeString()}
-                  </p>
+                  <p className="text-neutral-600 text-xs tracking-[0.1em] uppercase">{new Date().toLocaleTimeString()}</p>
                 </div>
               )}
 
@@ -347,8 +381,8 @@ export default function ScannerPage() {
             </div>
           )}
 
-          {/* Camera Controls */}
-          <div className="flex gap-4 mb-8">
+          {/* Controls */}
+          <div className="flex gap-4">
             {!scanning ? (
               <button
                 onClick={startScanner}
@@ -366,47 +400,14 @@ export default function ScannerPage() {
             )}
           </div>
 
-          {/* Manual Token Input */}
-          <div className="mb-8 border border-neutral-800 rounded-xl p-6">
-            <p className="text-xs tracking-[0.2em] uppercase text-neutral-500 mb-4">Manual Check-in</p>
-            <form onSubmit={handleManualSubmit} className="flex gap-3">
-              <input
-                type="text"
-                value={manualToken}
-                onChange={(e) => setManualToken(e.target.value)}
-                placeholder="Paste QR token or full URL"
-                className="flex-1 px-4 py-3 bg-neutral-900 border border-neutral-700 rounded-lg text-sm text-white placeholder-neutral-600 focus:outline-none focus:border-neutral-500 font-mono"
-              />
-              <button
-                type="submit"
-                disabled={isProcessing || !manualToken.trim()}
-                className="px-5 py-3 bg-neutral-800 hover:bg-neutral-700 disabled:opacity-40 text-white text-sm tracking-[0.15em] uppercase rounded-lg transition-all duration-300"
-              >
-                Check In
-              </button>
-            </form>
-            <p className="text-xs text-neutral-600 mt-2">
-              Use this to test or manually check in a guest by pasting their token or ticket URL.
-            </p>
-          </div>
-
-          {/* Debug Info */}
-          {debugText && (
-            <div className="mb-8 p-4 bg-neutral-950 border border-neutral-800 rounded-lg">
-              <p className="text-xs tracking-[0.2em] uppercase text-neutral-600 mb-1">Debug</p>
-              <p className="text-xs text-neutral-400 font-mono break-all">{debugText}</p>
-            </div>
-          )}
-
           {/* Instructions */}
-          <div className="mt-4 space-y-2">
+          <div className="mt-8 space-y-2">
             <p className="text-xs tracking-[0.2em] uppercase text-neutral-600">How to use</p>
             <ul className="text-sm text-neutral-500 space-y-1 font-light">
               <li>1. Click &quot;Start Scanner&quot; and allow camera access</li>
               <li>2. Point camera at guest&apos;s QR code ticket</li>
               <li>3. The guest will be automatically checked in</li>
               <li>4. Green = success, Yellow = already checked in, Red = invalid</li>
-              <li>5. Camera access requires HTTPS on mobile devices</li>
             </ul>
           </div>
         </div>
