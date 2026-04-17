@@ -495,7 +495,7 @@ export default function EventsPage() {
           <div className="absolute inset-0 bg-gradient-to-br from-neutral-900 via-black to-black" />
         </div>
         <div className="relative z-10 min-h-screen flex items-center justify-center">
-          <p className="text-lg tracking-[0.2em] uppercase text-neutral-400">Loading events</p>
+          <p className="text-lg tracking-[0.2em] uppercase text-neutral-400 animate-pulse">Loading events</p>
         </div>
       </div>
     )
@@ -525,12 +525,12 @@ export default function EventsPage() {
           </div>
 
           {error && (
-            <div className="mb-8 text-sm tracking-[0.15em] py-3 px-4 border border-red-400/30 text-red-400 bg-red-400/5">
+            <div className="mb-8 text-sm tracking-[0.15em] py-3 px-4 border border-red-400/30 text-red-400 bg-red-400/5 rounded">
               {error}
             </div>
           )}
           {success && (
-            <div className="mb-8 text-sm tracking-[0.15em] py-3 px-4 border border-emerald-400/30 text-emerald-400 bg-emerald-400/5">
+            <div className="mb-8 text-sm tracking-[0.15em] py-3 px-4 border border-emerald-400/30 text-emerald-400 bg-emerald-400/5 rounded">
               {success}
             </div>
           )}
@@ -550,7 +550,7 @@ export default function EventsPage() {
                 <button
                   type="submit"
                   disabled={isCreating}
-                  className="px-6 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs tracking-[0.2em] uppercase rounded disabled:opacity-50 transition-all duration-300"
+                  className="px-6 py-2 border border-neutral-600 text-white hover:bg-neutral-800 hover:border-neutral-500 text-xs tracking-[0.2em] uppercase rounded disabled:opacity-50 transition-all duration-300"
                 >
                   {isCreating ? "Creating..." : "Create Event"}
                 </button>
@@ -570,7 +570,7 @@ export default function EventsPage() {
                 return (
                   <div
                     key={event.id}
-                    className={`border p-6 transition-all duration-300 ${
+                    className={`border p-6 rounded transition-all duration-300 ${
                       isPast ? "border-neutral-800/50 opacity-70" : "border-neutral-800 hover:border-neutral-700"
                     }`}
                   >

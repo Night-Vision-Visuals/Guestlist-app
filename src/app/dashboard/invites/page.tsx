@@ -309,20 +309,6 @@ export default function InvitesPage() {
 
       {/* Content */}
       <div className="relative z-10">
-        {/* Top Navigation */}
-        <div className="flex justify-between items-center px-6 md:px-16 py-12 border-b border-neutral-800">
-          <div className="space-y-1">
-            <div className="text-xs tracking-[0.3em] uppercase text-neutral-500 font-light">NIGHT VISION</div>
-            <div className="h-px w-12 bg-gradient-to-r from-white to-transparent" />
-          </div>
-          <div className="text-right">
-            <div className="text-xs tracking-[0.3em] uppercase text-neutral-500 font-light">{invites.length} Codes</div>
-            <div className="text-[10px] tracking-[0.2em] uppercase text-neutral-600 font-light mt-1">
-              {currentEvent?.name || "Invitation Management"}
-            </div>
-          </div>
-        </div>
-
         <div className="px-6 md:px-16 py-12">
           {/* Header */}
           <div className="mb-12 space-y-4">
@@ -341,19 +327,19 @@ export default function InvitesPage() {
 
           {/* Messages */}
           {error && (
-            <div className="mb-8 text-sm tracking-[0.15em] py-3 px-4 border border-red-400/30 text-red-400 bg-red-400/5">
+            <div className="mb-8 text-sm tracking-[0.15em] py-3 px-4 border border-red-400/30 text-red-400 bg-red-400/5 rounded">
               {error}
             </div>
           )}
           {success && (
-            <div className="mb-8 text-sm tracking-[0.15em] py-3 px-4 border border-emerald-400/30 text-emerald-400 bg-emerald-400/5">
+            <div className="mb-8 text-sm tracking-[0.15em] py-3 px-4 border border-emerald-400/30 text-emerald-400 bg-emerald-400/5 rounded">
               {success}
             </div>
           )}
 
           {/* Per-Admin Summary */}
           {adminSummary.length > 0 && (
-            <div className="mb-12 border border-neutral-800 p-6">
+            <div className="mb-12 border border-neutral-800 p-6 rounded">
               <h2 className="text-xs tracking-[0.3em] uppercase text-neutral-500 mb-4">By Admin</h2>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
@@ -463,7 +449,7 @@ export default function InvitesPage() {
                 <button
                   type="submit"
                   disabled={isCreating}
-                  className="px-6 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs tracking-[0.2em] uppercase rounded disabled:opacity-50 transition-all duration-300"
+                  className="px-6 py-2 border border-neutral-600 text-white hover:bg-neutral-800 hover:border-neutral-500 text-xs tracking-[0.2em] uppercase rounded disabled:opacity-50 transition-all duration-300"
                 >
                   {isCreating ? "Creating..." : "Create Code"}
                 </button>
@@ -487,7 +473,7 @@ export default function InvitesPage() {
                 return (
                   <div
                     key={invite.id}
-                    className="border border-neutral-800 hover:border-neutral-700 p-6 transition-all duration-300"
+                    className="border border-neutral-800 hover:border-neutral-700 p-6 rounded transition-all duration-300"
                   >
                     <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mb-4">
                       <div>

@@ -121,7 +121,7 @@ function StatCard({ label, value, sub, color = "text-white" }: {
   color?: string
 }) {
   return (
-    <div className="border border-neutral-800 p-6 hover:border-neutral-700 transition-all duration-300">
+    <div className="border border-neutral-800 p-6 rounded hover:border-neutral-700 transition-all duration-300">
       <p className="text-xs tracking-[0.2em] uppercase text-neutral-500 mb-3">{label}</p>
       <p className={`text-4xl font-light mb-1 ${color}`}>{value}</p>
       {sub && <p className="text-xs text-neutral-600">{sub}</p>}
@@ -171,9 +171,11 @@ export default function AnalyticsPage() {
       <div className="min-h-screen bg-black text-white overflow-hidden">
         <div className="fixed inset-0 z-0">
           <div className="absolute inset-0 bg-gradient-to-br from-neutral-900 via-black to-black" />
+          <div className="absolute top-0 left-1/4 w-96 h-96 bg-white/10 rounded-full blur-3xl opacity-20 animate-pulse" />
+          <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-white/5 rounded-full blur-3xl opacity-20 animate-pulse" />
         </div>
         <div className="relative z-10 min-h-screen flex items-center justify-center">
-          <p className="text-lg tracking-[0.2em] uppercase text-neutral-400">Loading analytics</p>
+          <p className="text-lg tracking-[0.2em] uppercase text-neutral-400 animate-pulse">Loading analytics</p>
         </div>
       </div>
     )
@@ -273,12 +275,12 @@ export default function AnalyticsPage() {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                   <StatCard label="Show Rate"  value={`${analytics.statistics.showRate}%`} color="text-emerald-400" sub="checked in / approved" />
                   <StatCard label="No-Shows"   value={analytics.statistics.noShows}        color="text-red-400"     sub="approved but didn't check in" />
-                  <div className="border border-neutral-800 p-6">
+                  <div className="border border-neutral-800 p-6 rounded">
                     <p className="text-xs tracking-[0.2em] uppercase text-neutral-500 mb-3">Approval Rate</p>
                     <div className="flex items-center gap-4 mt-4">
-                      <div className="flex-1 h-2 bg-neutral-800 overflow-hidden">
+                      <div className="flex-1 h-2 bg-neutral-800 rounded-full overflow-hidden">
                         <div
-                          className="h-full bg-emerald-600 transition-all duration-500"
+                          className="h-full bg-emerald-600 rounded-full transition-all duration-500"
                           style={{ width: `${analytics.statistics.approvalRate}%` }}
                         />
                       </div>
@@ -292,7 +294,7 @@ export default function AnalyticsPage() {
               <section>
                 <h2 className="text-xs tracking-[0.3em] uppercase text-neutral-500 mb-6">Income</h2>
                 {analytics.incomeStats.entryFee === null ? (
-                  <div className="border border-neutral-800 p-6">
+                  <div className="border border-neutral-800 p-6 rounded">
                     <p className="text-sm text-neutral-500 tracking-[0.1em]">
                       No entry fee configured for this event. Set one in the Events page to enable income tracking.
                     </p>
@@ -300,7 +302,7 @@ export default function AnalyticsPage() {
                 ) : (
                   <>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
-                      <div className="border border-neutral-800 p-6">
+                      <div className="border border-neutral-800 p-6 rounded">
                         <p className="text-xs tracking-[0.2em] uppercase text-neutral-500 mb-3">Projected (Approved)</p>
                         <p className="text-4xl font-light text-cyan-400">€{fmt(analytics.incomeStats.projectedApproved)}</p>
                         <p className="text-xs text-neutral-600 mt-1">
@@ -310,7 +312,7 @@ export default function AnalyticsPage() {
                             : ""}
                         </p>
                       </div>
-                      <div className="border border-neutral-800 p-6">
+                      <div className="border border-neutral-800 p-6 rounded">
                         <p className="text-xs tracking-[0.2em] uppercase text-neutral-500 mb-3">Actual (Checked In)</p>
                         <p className="text-4xl font-light text-emerald-400">€{fmt(analytics.incomeStats.projectedCheckedIn)}</p>
                         <p className="text-xs text-neutral-600 mt-1">
@@ -320,7 +322,7 @@ export default function AnalyticsPage() {
                     </div>
 
                     {/* Breakdown table — collapsible */}
-                    <div className="border border-neutral-800">
+                    <div className="border border-neutral-800 rounded">
                       <button
                         onClick={() => setShowTierBreakdown(!showTierBreakdown)}
                         className="w-full flex items-center justify-between px-6 py-4 text-left hover:bg-neutral-900/40 transition-colors"
@@ -387,8 +389,7 @@ export default function AnalyticsPage() {
               </section>
 
               {/* ── Applications Over Time ───────────────────────────────── */}
-              <section className="border border-neutral-800 p-8">
-                <h3 className="text-xs tracking-[0.3em] uppercase text-neutral-500 mb-6">Applications Over Time</h3>
+              <section className="border border-neutral-800 p-8 rounded">
                 <ResponsiveContainer width="100%" height={220}>
                   <LineChart data={timelineData} margin={{ top: 4, right: 8, left: -24, bottom: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#262626" />
@@ -405,7 +406,7 @@ export default function AnalyticsPage() {
               </section>
 
               {/* ── Demographics ─────────────────────────────────────────── */}
-              <section className="border border-neutral-800 p-8">
+              <section className="border border-neutral-800 p-8 rounded">
                 <div className="flex items-center justify-between mb-6">
                   <h3 className="text-xs tracking-[0.3em] uppercase text-neutral-500">Demographics</h3>
                   <div className="flex gap-2">
@@ -413,7 +414,7 @@ export default function AnalyticsPage() {
                       <button
                         key={f}
                         onClick={() => setDemoFilter(f)}
-                        className={`px-3 py-1 text-[10px] tracking-[0.2em] uppercase border transition-all duration-200 ${
+                        className={`px-3 py-1 text-[10px] tracking-[0.2em] uppercase border rounded transition-all duration-200 ${
                           demoFilter === f
                             ? "border-white text-white"
                             : "border-neutral-700 text-neutral-500 hover:border-neutral-500"
@@ -473,7 +474,7 @@ export default function AnalyticsPage() {
               </section>
 
               {/* ── Age Distribution ─────────────────────────────────────── */}
-              <section className="border border-neutral-800 p-8">
+              <section className="border border-neutral-800 p-8 rounded">
                 <div className="flex items-center justify-between mb-6">
                   <h3 className="text-xs tracking-[0.3em] uppercase text-neutral-500">Age Distribution</h3>
                   <div className="flex gap-2">
@@ -481,7 +482,7 @@ export default function AnalyticsPage() {
                       <button
                         key={f}
                         onClick={() => setAgeGenderFilter(f)}
-                        className={`px-3 py-1 text-[10px] tracking-[0.2em] uppercase border transition-all duration-200 ${
+                        className={`px-3 py-1 text-[10px] tracking-[0.2em] uppercase border rounded transition-all duration-200 ${
                           ageGenderFilter === f
                             ? "border-white text-white"
                             : "border-neutral-700 text-neutral-500 hover:border-neutral-500"
@@ -519,8 +520,7 @@ export default function AnalyticsPage() {
 
               {/* ── Heard About Us ───────────────────────────────────────── */}
               {Object.keys(analytics.heardAboutUs).length > 0 && (
-                <section className="border border-neutral-800 p-8">
-                  <h3 className="text-xs tracking-[0.3em] uppercase text-neutral-500 mb-6">How Did They Hear About Us</h3>
+                <section className="border border-neutral-800 p-8 rounded">
                   <div className="space-y-3">
                     {Object.entries(analytics.heardAboutUs)
                       .sort((a, b) => b[1] - a[1])
@@ -555,7 +555,7 @@ export default function AnalyticsPage() {
 
                 {/* Per-admin stats */}
                 {analytics.inviteCodesByAdmin.length > 0 && (
-                  <div className="border border-neutral-800 p-6 mb-4">
+                  <div className="border border-neutral-800 p-6 mb-4 rounded">
                     <h3 className="text-xs tracking-[0.3em] uppercase text-neutral-500 mb-4">By Admin</h3>
                     <div className="overflow-x-auto">
                       <table className="w-full text-sm">
@@ -587,7 +587,7 @@ export default function AnalyticsPage() {
 
                 {/* Collapsible code breakdown */}
                 {analytics.inviteCodeDetails.length > 0 && (
-                  <div className="border border-neutral-800">
+                  <div className="border border-neutral-800 rounded">
                     <button
                       onClick={() => setShowCodeBreakdown(!showCodeBreakdown)}
                       className="w-full flex items-center justify-between px-6 py-4 text-left hover:bg-neutral-900/40 transition-colors"
@@ -635,7 +635,7 @@ export default function AnalyticsPage() {
         </div>
 
         {/* Footer */}
-        <div className="flex justify-between items-center px-6 md:px-16 py-12 border-t border-neutral-800 mt-12">
+        <div className="flex justify-between items-center px-6 md:px-16 py-12 border-t border-neutral-800">
           <div className="text-[10px] tracking-[0.3em] uppercase text-neutral-700 font-light">Analytics Dashboard</div>
           <div className="text-[10px] tracking-[0.3em] uppercase text-neutral-700 font-light">© 2026</div>
         </div>

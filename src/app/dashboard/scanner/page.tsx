@@ -254,15 +254,6 @@ export default function ScannerPage() {
       </div>
 
       <div className="relative z-10">
-        {/* Header */}
-        <div className="flex justify-between items-center px-6 md:px-16 py-12 border-b border-neutral-800">
-          <div className="space-y-1">
-            <div className="text-xs tracking-[0.3em] uppercase text-neutral-500 font-light">NIGHT VISION</div>
-            <div className="h-px w-12 bg-gradient-to-r from-white to-transparent" />
-          </div>
-          <div className="text-xs tracking-[0.3em] uppercase text-neutral-500 font-light">Door Scanner</div>
-        </div>
-
         <div className="px-6 md:px-16 py-12 max-w-2xl mx-auto">
           {/* Title */}
           <div className="mb-12 space-y-4">
@@ -386,7 +377,7 @@ export default function ScannerPage() {
             {!scanning ? (
               <button
                 onClick={startScanner}
-                className="flex-1 px-6 py-4 bg-emerald-600 hover:bg-emerald-700 text-white text-sm tracking-[0.2em] uppercase rounded-lg transition-all duration-300"
+                className="flex-1 px-6 py-4 border border-neutral-600 text-white hover:bg-neutral-800 hover:border-neutral-500 text-sm tracking-[0.2em] uppercase rounded-lg transition-all duration-300"
               >
                 Start Scanner
               </button>

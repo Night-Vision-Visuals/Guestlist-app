@@ -383,6 +383,8 @@ export default function DashboardPage() {
       <div className="min-h-screen bg-black text-white overflow-hidden">
         <div className="fixed inset-0 z-0">
           <div className="absolute inset-0 bg-gradient-to-br from-neutral-900 via-black to-black" />
+          <div className="absolute top-0 left-1/4 w-96 h-96 bg-white/10 rounded-full blur-3xl opacity-20 animate-pulse" />
+          <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-white/5 rounded-full blur-3xl opacity-20 animate-pulse" />
         </div>
         <div className="relative z-10 min-h-screen flex items-center justify-center">
           <p className="text-lg tracking-[0.2em] uppercase text-neutral-400 animate-pulse">Loading applications</p>
@@ -415,7 +417,7 @@ export default function DashboardPage() {
           </div>
 
           {/* Email Panel */}
-          <div className="mb-8 border border-neutral-800 bg-neutral-900/30">
+          <div className="mb-8 border border-neutral-800 bg-neutral-900/30 rounded">
             <button
               onClick={() => setShowEmailPanel(v => !v)}
               className="w-full px-5 py-4 flex items-center justify-between text-left hover:bg-neutral-900/50 transition-all duration-200"
@@ -449,19 +451,19 @@ export default function DashboardPage() {
                     return (
                       <>
                         <div className="border border-neutral-800 p-3">
-                          <p className="text-[9px] tracking-[0.25em] uppercase text-neutral-600 mb-1">Emails Sent</p>
+                           <p className="text-[10px] tracking-[0.25em] uppercase text-neutral-600 mb-1">Emails Sent</p>
                           <p className="text-xl font-light text-emerald-400">{sent}</p>
                         </div>
                         <div className="border border-neutral-800 p-3">
-                          <p className="text-[9px] tracking-[0.25em] uppercase text-neutral-600 mb-1">Pending Send</p>
+                           <p className="text-[10px] tracking-[0.25em] uppercase text-neutral-600 mb-1">Pending Send</p>
                           <p className="text-xl font-light text-yellow-400">{pending}</p>
                         </div>
                         <div className="border border-neutral-800 p-3">
-                          <p className="text-[9px] tracking-[0.25em] uppercase text-neutral-600 mb-1">Approved</p>
+                           <p className="text-[10px] tracking-[0.25em] uppercase text-neutral-600 mb-1">Approved</p>
                           <p className="text-xl font-light text-white">{approved}</p>
                         </div>
                         <div className="border border-neutral-800 p-3">
-                          <p className="text-[9px] tracking-[0.25em] uppercase text-neutral-600 mb-1">Rejected</p>
+                           <p className="text-[10px] tracking-[0.25em] uppercase text-neutral-600 mb-1">Rejected</p>
                           <p className="text-xl font-light text-white">{rejected}</p>
                         </div>
                       </>
@@ -551,7 +553,7 @@ export default function DashboardPage() {
           </div>
 
           {error && (
-            <div className="mb-8 text-sm tracking-[0.15em] py-3 px-4 border border-red-400/30 text-red-400 bg-red-400/5">
+            <div className="mb-8 text-sm tracking-[0.15em] py-3 px-4 border border-red-400/30 text-red-400 bg-red-400/5 rounded">
               {error}
             </div>
           )}
@@ -588,7 +590,7 @@ export default function DashboardPage() {
 
             {/* Collapsible filter panel */}
             {showFilterPanel && (
-              <div className="border border-neutral-800 bg-neutral-900/40 p-5 space-y-5">
+              <div className="border border-neutral-800 bg-neutral-900/40 p-5 space-y-5 rounded">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
 
                   {/* Status */}
@@ -991,9 +993,9 @@ export default function DashboardPage() {
                     {/* Overview quick actions for applied */}
                     {viewMode === "overview" && app.status === "applied" && (
                       <div className="px-4 py-2 border-t border-neutral-800/30 flex gap-2">
-                        <button onClick={() => updateStatus(app.id, "approve")} className="px-3 py-1 text-[10px] tracking-[0.1em] uppercase text-emerald-400 border border-emerald-400/20 hover:border-emerald-400 hover:bg-emerald-400/5 transition-all rounded">Approve</button>
-                        <button onClick={() => updateStatus(app.id, "waitlist")} className="px-3 py-1 text-[10px] tracking-[0.1em] uppercase text-yellow-400 border border-yellow-400/20 hover:border-yellow-400 hover:bg-yellow-400/5 transition-all rounded">Waitlist</button>
-                        <button onClick={() => updateStatus(app.id, "reject")} className="px-3 py-1 text-[10px] tracking-[0.1em] uppercase text-red-400 border border-red-400/20 hover:border-red-400 hover:bg-red-400/5 transition-all rounded">Reject</button>
+                        <button onClick={() => updateStatus(app.id, "approve")} className="px-3 py-1 text-[10px] tracking-[0.1em] uppercase text-emerald-400 border border-emerald-400/30 hover:border-emerald-400 hover:bg-emerald-400/5 transition-all rounded">Approve</button>
+                        <button onClick={() => updateStatus(app.id, "waitlist")} className="px-3 py-1 text-[10px] tracking-[0.1em] uppercase text-yellow-400 border border-yellow-400/30 hover:border-yellow-400 hover:bg-yellow-400/5 transition-all rounded">Waitlist</button>
+                        <button onClick={() => updateStatus(app.id, "reject")} className="px-3 py-1 text-[10px] tracking-[0.1em] uppercase text-red-400 border border-red-400/30 hover:border-red-400 hover:bg-red-400/5 transition-all rounded">Reject</button>
                       </div>
                     )}
                   </div>
