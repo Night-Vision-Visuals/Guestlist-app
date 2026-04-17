@@ -13,6 +13,8 @@ interface EventForm {
   poster_url: string
   min_age: string
   max_age: string
+  entry_fee: string
+  friendlist_discount: string
 }
 
 interface EventRecord {
@@ -24,6 +26,8 @@ interface EventRecord {
   poster_url: string | null
   min_age: number | null
   max_age: number | null
+  entry_fee: number | null
+  friendlist_discount: number | null
   created_at: string
 }
 
@@ -35,6 +39,8 @@ const emptyForm: EventForm = {
   poster_url: "",
   min_age: "18",
   max_age: "",
+  entry_fee: "",
+  friendlist_discount: "",
 }
 
 // ─── Calendar picker ──────────────────────────────────────────────────────────
@@ -260,6 +266,38 @@ function FormFields({
             className="w-full bg-transparent border-b border-neutral-800 px-0 py-3 text-white placeholder:text-neutral-600 focus:outline-none focus:border-neutral-600 transition-all duration-300 text-sm"
           />
         </div>
+
+        {/* Entry Fee */}
+        <div>
+          <label className="text-xs tracking-[0.2em] uppercase text-neutral-500 mb-2 block">
+            Entry Fee (€, optional)
+          </label>
+          <input
+            type="number"
+            min="0"
+            step="0.50"
+            value={data.entry_fee}
+            onChange={(e) => onChange({ ...data, entry_fee: e.target.value })}
+            placeholder="e.g. 10.00"
+            className="w-full bg-transparent border-b border-neutral-800 px-0 py-3 text-white placeholder:text-neutral-600 focus:outline-none focus:border-neutral-600 transition-all duration-300 text-sm"
+          />
+        </div>
+
+        {/* Friendlist Discount */}
+        <div>
+          <label className="text-xs tracking-[0.2em] uppercase text-neutral-500 mb-2 block">
+            Friendlist Discount % (optional)
+          </label>
+          <input
+            type="number"
+            min="0"
+            max="100"
+            value={data.friendlist_discount}
+            onChange={(e) => onChange({ ...data, friendlist_discount: e.target.value })}
+            placeholder="e.g. 50"
+            className="w-full bg-transparent border-b border-neutral-800 px-0 py-3 text-white placeholder:text-neutral-600 focus:outline-none focus:border-neutral-600 transition-all duration-300 text-sm"
+          />
+        </div>
       </div>
 
       {/* Description */}
@@ -346,6 +384,8 @@ export default function EventsPage() {
           poster_url: formData.poster_url || null,
           min_age: formData.min_age || 18,
           max_age: formData.max_age || null,
+          entry_fee: formData.entry_fee || null,
+          friendlist_discount: formData.friendlist_discount || null,
         }),
         credentials: "include",
       })
@@ -383,6 +423,8 @@ export default function EventsPage() {
           poster_url: editFormData.poster_url || null,
           min_age: editFormData.min_age || 18,
           max_age: editFormData.max_age || null,
+          entry_fee: editFormData.entry_fee || null,
+          friendlist_discount: editFormData.friendlist_discount || null,
         }),
         credentials: "include",
       })
@@ -439,6 +481,8 @@ export default function EventsPage() {
       poster_url: event.poster_url || "",
       min_age: event.min_age?.toString() || "18",
       max_age: event.max_age?.toString() || "",
+      entry_fee: event.entry_fee?.toString() || "",
+      friendlist_discount: event.friendlist_discount?.toString() || "",
     })
   }
 
@@ -599,11 +643,23 @@ export default function EventsPage() {
                           </div>
                         </div>
 
-                        {(event.min_age || event.max_age) && (
-                          <div className="mb-4 flex gap-2">
-                            <span className="text-[10px] px-2 py-0.5 rounded border text-orange-400 border-orange-400/30 bg-orange-400/10 tracking-[0.1em]">
-                              Age: {event.min_age || 18}{event.max_age ? `–${event.max_age}` : "+"}
-                            </span>
+                        {(event.min_age || event.max_age || event.entry_fee != null || event.friendlist_discount != null) && (
+                          <div className="mb-4 flex gap-2 flex-wrap">
+                            {(event.min_age || event.max_age) && (
+                              <span className="text-[10px] px-2 py-0.5 rounded border text-orange-400 border-orange-400/30 bg-orange-400/10 tracking-[0.1em]">
+                                Age: {event.min_age || 18}{event.max_age ? `–${event.max_age}` : "+"}
+                              </span>
+                            )}
+                            {event.entry_fee != null && (
+                              <span className="text-[10px] px-2 py-0.5 rounded border text-cyan-400 border-cyan-400/30 bg-cyan-400/10 tracking-[0.1em]">
+                                Entry: €{event.entry_fee}
+                              </span>
+                            )}
+                            {event.friendlist_discount != null && (
+                              <span className="text-[10px] px-2 py-0.5 rounded border text-purple-400 border-purple-400/30 bg-purple-400/10 tracking-[0.1em]">
+                                Friendlist: {event.friendlist_discount}% off
+                              </span>
+                            )}
                           </div>
                         )}
 

@@ -21,14 +21,35 @@ interface Invitation {
   created_by_admin_id: string
   event_id: string | null
   invite_type: string | null
-  admin: Admin | null
+  tier: string | null
+  comment: string | null
+  admins: Admin | null
+}
+
+interface AdminSummary {
+  adminId: string
+  username: string
+  codesCreated: number
+  totalCapacity: number
+  totalUsed: number
+}
+
+const TIER_LABELS: Record<string, string> = {
+  guest: "Guest",
+  friendlist: "Friendlist",
+  crew: "Crew",
+}
+
+const TIER_COLORS: Record<string, string> = {
+  guest: "text-cyan-400 border-cyan-400/30 bg-cyan-400/5",
+  friendlist: "text-purple-400 border-purple-400/30 bg-purple-400/5",
+  crew: "text-yellow-400 border-yellow-400/30 bg-yellow-400/5",
 }
 
 function copyToClipboard(text: string): Promise<void> {
   if (navigator.clipboard && window.isSecureContext) {
     return navigator.clipboard.writeText(text)
   }
-  // Fallback for HTTP (non-secure) contexts
   return new Promise((resolve, reject) => {
     const ta = document.createElement("textarea")
     ta.value = text
@@ -53,10 +74,12 @@ export default function InvitesPage() {
   const [showCreateForm, setShowCreateForm] = useState(false)
   const [isCreating, setIsCreating] = useState(false)
   const [generatedCode, setGeneratedCode] = useState<string | null>(null)
+  const [generatedTier, setGeneratedTier] = useState<string>("guest")
   const [copied, setCopied] = useState(false)
   const [formData, setFormData] = useState({
+    tier: "guest",
     max_uses: 1,
-    invite_type: "guestlist"
+    comment: "",
   })
 
   useEffect(() => {
@@ -66,24 +89,25 @@ export default function InvitesPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentEvent])
 
+  // Auto-lock max_uses to 1 when tier changes to friendlist/crew
+  useEffect(() => {
+    if (formData.tier === "friendlist" || formData.tier === "crew") {
+      setFormData(prev => ({ ...prev, max_uses: 1 }))
+    }
+  }, [formData.tier])
+
   const fetchInvites = async (eventId?: string) => {
     try {
       setIsLoading(true)
-      const url = eventId
-        ? `/api/invite/list?eventId=${eventId}`
-        : "/api/invite/list"
-      const res = await fetch(url, {
-        credentials: "include"
-      })
+      const url = eventId ? `/api/invite/list?eventId=${eventId}` : "/api/invite/list"
+      const res = await fetch(url, { credentials: "include" })
 
       if (res.status === 401) {
         router.push("/admin")
         return
       }
 
-      if (!res.ok) {
-        throw new Error("Failed to fetch invites")
-      }
+      if (!res.ok) throw new Error("Failed to fetch invites")
 
       const data = await res.json()
       setInvites(data || [])
@@ -107,27 +131,23 @@ export default function InvitesPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          max_uses: parseInt(formData.max_uses.toString()),
-          invite_type: formData.invite_type,
-          event_id: currentEvent?.id || null
+          tier: formData.tier,
+          max_uses: formData.max_uses,
+          comment: formData.comment || null,
+          event_id: currentEvent?.id || null,
         }),
-        credentials: "include"
+        credentials: "include",
       })
 
       const data = await res.json()
-
-      if (!res.ok) {
-        throw new Error(data.error || "Failed to create invitation")
-      }
+      if (!res.ok) throw new Error(data.error || "Failed to create invitation")
 
       setGeneratedCode(data.code)
-      setFormData({ max_uses: 1, invite_type: "guestlist" })
+      setGeneratedTier(formData.tier)
+      setFormData({ tier: "guest", max_uses: 1, comment: "" })
       setShowCreateForm(false)
 
-      // Copy code to clipboard automatically
       copyToClipboard(data.code).then(() => setCopied(true)).catch(() => {})
-
-      // Refresh invites list
       fetchInvites(currentEvent?.id)
     } catch (err) {
       console.error(err)
@@ -147,23 +167,18 @@ export default function InvitesPage() {
   }
 
   const handleRevokeInvite = async (id: string) => {
-    if (!confirm("Are you sure you want to revoke this invitation code?")) {
-      return
-    }
+    if (!confirm("Are you sure you want to revoke this invitation code?")) return
 
     try {
       const res = await fetch("/api/invite/revoke", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id }),
-        credentials: "include"
+        credentials: "include",
       })
 
       const data = await res.json()
-
-      if (!res.ok) {
-        throw new Error(data.error || "Failed to revoke invitation")
-      }
+      if (!res.ok) throw new Error(data.error || "Failed to revoke invitation")
 
       setSuccess("Invitation code revoked")
       setError("")
@@ -180,12 +195,10 @@ export default function InvitesPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id }),
-        credentials: "include"
+        credentials: "include",
       })
       const data = await res.json()
-      if (!res.ok) {
-        throw new Error(data.error || "Failed to delete invitation")
-      }
+      if (!res.ok) throw new Error(data.error || "Failed to delete invitation")
       setSuccess("Invitation code deleted")
       setError("")
       fetchInvites(currentEvent?.id)
@@ -195,41 +208,35 @@ export default function InvitesPage() {
     }
   }
 
-  const getUsagePercentage = (current: number, max: number) => {
-    return Math.round((current / max) * 100)
-  }
-
   const getStatusColor = (invite: Invitation) => {
-    if (invite.revoked_at) {
-      return "text-red-400"
-    }
-    if (invite.declined_at) {
-      return "text-purple-400"
-    }
-    if (invite.redeemed) {
-      return "text-yellow-400"
-    }
-    if (invite.current_uses >= invite.max_uses) {
-      return "text-orange-400"
-    }
+    if (invite.revoked_at) return "text-red-400"
+    if (invite.declined_at) return "text-purple-400"
+    if (invite.redeemed) return "text-yellow-400"
+    if (invite.current_uses >= invite.max_uses) return "text-orange-400"
     return "text-emerald-400"
   }
 
   const getStatusText = (invite: Invitation) => {
-    if (invite.revoked_at) {
-      return "Revoked"
-    }
-    if (invite.declined_at) {
-      return "Declined"
-    }
-    if (invite.redeemed) {
-      return "Fully Used"
-    }
-    if (invite.current_uses >= invite.max_uses) {
-      return "Exhausted"
-    }
+    if (invite.revoked_at) return "Revoked"
+    if (invite.declined_at) return "Declined"
+    if (invite.redeemed) return "Fully Used"
+    if (invite.current_uses >= invite.max_uses) return "Exhausted"
     return "Active"
   }
+
+  // Compute per-admin summary from invite list
+  const adminSummary = (() => {
+    const map: Record<string, AdminSummary> = {}
+    invites.forEach((inv) => {
+      const id = inv.created_by_admin_id || "unknown"
+      const username = inv.admins?.username || "Unknown"
+      if (!map[id]) map[id] = { adminId: id, username, codesCreated: 0, totalCapacity: 0, totalUsed: 0 }
+      map[id].codesCreated++
+      map[id].totalCapacity += inv.max_uses
+      map[id].totalUsed += inv.current_uses
+    })
+    return Object.values(map).sort((a, b) => b.codesCreated - a.codesCreated)
+  })()
 
   if (eventsLoading || isLoading) {
     return (
@@ -239,11 +246,8 @@ export default function InvitesPage() {
           <div className="absolute top-0 left-1/4 w-96 h-96 bg-white/10 rounded-full blur-3xl opacity-20 animate-pulse" />
           <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-white/5 rounded-full blur-3xl opacity-20 animate-pulse" />
         </div>
-
         <div className="relative z-10 min-h-screen flex items-center justify-center">
-          <p className="text-lg tracking-[0.2em] uppercase text-neutral-400">
-            Loading invitations
-          </p>
+          <p className="text-lg tracking-[0.2em] uppercase text-neutral-400">Loading invitations</p>
         </div>
       </div>
     )
@@ -251,7 +255,6 @@ export default function InvitesPage() {
 
   return (
     <div className="min-h-screen bg-black text-white">
-      {/* Animated gradient background */}
       <div className="fixed inset-0 z-0">
         <div className="absolute inset-0 bg-gradient-to-br from-neutral-900 via-black to-black" />
         <div className="absolute top-0 left-1/4 w-96 h-96 bg-white/10 rounded-full blur-3xl opacity-20 animate-pulse" />
@@ -261,17 +264,17 @@ export default function InvitesPage() {
       {/* Generated Code Modal */}
       {generatedCode && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
-          {/* Backdrop */}
-          <div
-            className="absolute inset-0 bg-black/80 backdrop-blur-sm"
-            onClick={() => setGeneratedCode(null)}
-          />
-          {/* Modal */}
+          <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={() => setGeneratedCode(null)} />
           <div className="relative z-10 flex flex-col items-center gap-8 px-12 py-12 border border-neutral-700 bg-neutral-900/90 rounded-2xl shadow-2xl max-w-md w-full mx-4">
             <div className="space-y-2 text-center">
               <p className="text-[10px] tracking-[0.4em] uppercase text-neutral-500 font-light">
                 Invitation Code Created
               </p>
+              {generatedTier && (
+                <span className={`inline-block text-[10px] px-2 py-0.5 border rounded tracking-[0.15em] uppercase ${TIER_COLORS[generatedTier] || "text-neutral-400 border-neutral-600"}`}>
+                  {TIER_LABELS[generatedTier] || generatedTier}
+                </span>
+              )}
               <div className="h-px w-16 mx-auto bg-gradient-to-r from-transparent via-white/30 to-transparent" />
             </div>
 
@@ -309,24 +312,17 @@ export default function InvitesPage() {
         {/* Top Navigation */}
         <div className="flex justify-between items-center px-6 md:px-16 py-12 border-b border-neutral-800">
           <div className="space-y-1">
-            <div className="text-xs tracking-[0.3em] uppercase text-neutral-500 font-light">
-              NIGHT VISION
-            </div>
+            <div className="text-xs tracking-[0.3em] uppercase text-neutral-500 font-light">NIGHT VISION</div>
             <div className="h-px w-12 bg-gradient-to-r from-white to-transparent" />
           </div>
-          <div className="flex items-center gap-8">
-            <div className="text-right">
-              <div className="text-xs tracking-[0.3em] uppercase text-neutral-500 font-light">
-                {invites.length} Codes
-              </div>
-              <div className="text-[10px] tracking-[0.2em] uppercase text-neutral-600 font-light mt-1">
-                {currentEvent?.name || "Invitation Management"}
-              </div>
+          <div className="text-right">
+            <div className="text-xs tracking-[0.3em] uppercase text-neutral-500 font-light">{invites.length} Codes</div>
+            <div className="text-[10px] tracking-[0.2em] uppercase text-neutral-600 font-light mt-1">
+              {currentEvent?.name || "Invitation Management"}
             </div>
           </div>
         </div>
 
-        {/* Main Content */}
         <div className="px-6 md:px-16 py-12">
           {/* Header */}
           <div className="mb-12 space-y-4">
@@ -349,10 +345,44 @@ export default function InvitesPage() {
               {error}
             </div>
           )}
-
           {success && (
             <div className="mb-8 text-sm tracking-[0.15em] py-3 px-4 border border-emerald-400/30 text-emerald-400 bg-emerald-400/5">
               {success}
+            </div>
+          )}
+
+          {/* Per-Admin Summary */}
+          {adminSummary.length > 0 && (
+            <div className="mb-12 border border-neutral-800 p-6">
+              <h2 className="text-xs tracking-[0.3em] uppercase text-neutral-500 mb-4">By Admin</h2>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-neutral-800">
+                      <th className="text-left text-[10px] tracking-[0.2em] uppercase text-neutral-600 pb-3 pr-6">Admin</th>
+                      <th className="text-right text-[10px] tracking-[0.2em] uppercase text-neutral-600 pb-3 pr-6">Codes</th>
+                      <th className="text-right text-[10px] tracking-[0.2em] uppercase text-neutral-600 pb-3 pr-6">Capacity</th>
+                      <th className="text-right text-[10px] tracking-[0.2em] uppercase text-neutral-600 pb-3 pr-6">Used</th>
+                      <th className="text-right text-[10px] tracking-[0.2em] uppercase text-neutral-600 pb-3">Rate</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {adminSummary.map((a) => (
+                      <tr key={a.adminId} className="border-b border-neutral-900">
+                        <td className="py-3 pr-6 text-white font-light">{a.username}</td>
+                        <td className="py-3 pr-6 text-neutral-400 text-right">{a.codesCreated}</td>
+                        <td className="py-3 pr-6 text-neutral-400 text-right">{a.totalCapacity}</td>
+                        <td className="py-3 pr-6 text-neutral-400 text-right">{a.totalUsed}</td>
+                        <td className="py-3 text-right">
+                          <span className={a.totalCapacity > 0 && Math.round((a.totalUsed / a.totalCapacity) * 100) > 60 ? "text-emerald-400" : "text-neutral-400"}>
+                            {a.totalCapacity > 0 ? Math.round((a.totalUsed / a.totalCapacity) * 100) : 0}%
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
 
@@ -369,36 +399,64 @@ export default function InvitesPage() {
             <div className="mb-12 border border-neutral-800 p-6 rounded-lg">
               <h2 className="text-xl font-light mb-6">Create New Invitation Code</h2>
               <form onSubmit={handleCreateInvite} className="space-y-6">
+
+                {/* Tier */}
                 <div>
                   <label className="text-xs tracking-[0.2em] uppercase text-neutral-500 mb-2 block">
-                    Invite Type
+                    Tier
                   </label>
-                  <select
-                    value={formData.invite_type}
-                    onChange={(e) => setFormData({ ...formData, invite_type: e.target.value })}
-                    required
-                    className="w-full bg-transparent border-b border-neutral-800 px-0 py-3 text-white focus:outline-none focus:border-neutral-600 transition-all duration-300 text-sm"
-                  >
-                    <option value="guestlist" className="bg-black">📋 Guestlist</option>
-                    <option value="friend" className="bg-black">🤝 Friend</option>
-                    <option value="vip" className="bg-black">💎 VIP</option>
-                    <option value="instagram" className="bg-black">📸 Instagram</option>
-                    <option value="whatsapp" className="bg-black">💬 WhatsApp</option>
-                    <option value="socialmedia" className="bg-black">🌐 Social Media</option>
-                  </select>
+                  <div className="flex gap-3">
+                    {(["guest", "friendlist", "crew"] as const).map((t) => (
+                      <button
+                        key={t}
+                        type="button"
+                        onClick={() => setFormData({ ...formData, tier: t })}
+                        className={`px-4 py-2 text-xs tracking-[0.2em] uppercase border rounded transition-all duration-200 ${
+                          formData.tier === t
+                            ? (TIER_COLORS[t] + " border-opacity-100")
+                            : "text-neutral-500 border-neutral-800 hover:border-neutral-600 hover:text-neutral-300"
+                        }`}
+                      >
+                        {TIER_LABELS[t]}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-[10px] text-neutral-600 mt-2 tracking-[0.1em]">
+                    {formData.tier === "guest" && "Standard guest code — up to 100 uses."}
+                    {formData.tier === "friendlist" && "Friendlist code — single-use, receives friendlist discount."}
+                    {formData.tier === "crew" && "Crew code — single-use, always free entry."}
+                  </p>
                 </div>
+
+                {/* Max Uses — only shown for guest tier */}
+                {formData.tier === "guest" && (
+                  <div>
+                    <label className="text-xs tracking-[0.2em] uppercase text-neutral-500 mb-2 block">
+                      Maximum Uses (1–100)
+                    </label>
+                    <input
+                      type="number"
+                      min="1"
+                      max="100"
+                      value={formData.max_uses}
+                      onChange={(e) => setFormData({ ...formData, max_uses: parseInt(e.target.value) })}
+                      required
+                      className="w-full bg-transparent border-b border-neutral-800 px-0 py-3 text-white focus:outline-none focus:border-neutral-600 transition-all duration-300 text-sm"
+                    />
+                  </div>
+                )}
+
+                {/* Comment */}
                 <div>
                   <label className="text-xs tracking-[0.2em] uppercase text-neutral-500 mb-2 block">
-                    Maximum Uses (1-100)
+                    Admin Note (optional)
                   </label>
                   <input
-                    type="number"
-                    min="1"
-                    max="100"
-                    value={formData.max_uses}
-                    onChange={(e) => setFormData({ ...formData, max_uses: parseInt(e.target.value) })}
-                    required
-                    className="w-full bg-transparent border-b border-neutral-800 px-0 py-3 text-white focus:outline-none focus:border-neutral-600 transition-all duration-300 text-sm"
+                    type="text"
+                    value={formData.comment}
+                    onChange={(e) => setFormData({ ...formData, comment: e.target.value })}
+                    placeholder="e.g. Max's table, Instagram DM promo..."
+                    className="w-full bg-transparent border-b border-neutral-800 px-0 py-3 text-white placeholder:text-neutral-600 focus:outline-none focus:border-neutral-600 transition-all duration-300 text-sm"
                   />
                 </div>
 
@@ -417,95 +475,101 @@ export default function InvitesPage() {
           <div className="space-y-4">
             {invites.length === 0 ? (
               <div className="text-center py-12">
-                <p className="text-neutral-500 text-sm tracking-[0.15em] uppercase">
-                  No invitation codes yet
-                </p>
+                <p className="text-neutral-500 text-sm tracking-[0.15em] uppercase">No invitation codes yet</p>
               </div>
             ) : (
-              invites.map((invite) => (
-                <div
-                  key={invite.id}
-                  className="border border-neutral-800 hover:border-neutral-700 p-6 transition-all duration-300"
-                >
-                  <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mb-4">
-                    <div>
-                      <p className="text-xs tracking-[0.2em] uppercase text-neutral-500 mb-2">Code</p>
-                      <p className="text-white font-mono text-sm tracking-[0.2em]">{invite.code_hash}</p>
-                      {invite.invite_type && (
-                        <p className="text-xs text-neutral-500 mt-1 capitalize">{invite.invite_type}</p>
-                      )}
-                    </div>
+              invites.map((invite) => {
+                const tierKey = invite.tier || ""
+                const tierLabel = TIER_LABELS[tierKey] || invite.invite_type || null
+                const tierColor = TIER_COLORS[tierKey] || "text-neutral-500 border-neutral-700 bg-neutral-800/20"
+                const usagePercent = Math.round((invite.current_uses / invite.max_uses) * 100)
 
-                    <div>
-                      <p className="text-xs tracking-[0.2em] uppercase text-neutral-500 mb-2">Status</p>
-                      <p className={`font-light text-sm tracking-[0.15em] uppercase ${getStatusColor(invite)}`}>
-                        {getStatusText(invite)}
-                      </p>
-                    </div>
+                return (
+                  <div
+                    key={invite.id}
+                    className="border border-neutral-800 hover:border-neutral-700 p-6 transition-all duration-300"
+                  >
+                    <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mb-4">
+                      <div>
+                        <p className="text-xs tracking-[0.2em] uppercase text-neutral-500 mb-2">Code</p>
+                        <p className="text-white font-mono text-sm tracking-[0.2em]">{invite.code_hash}</p>
+                        {tierLabel && (
+                          <span className={`inline-block mt-1 text-[10px] px-2 py-0.5 border rounded tracking-[0.1em] uppercase ${tierColor}`}>
+                            {tierLabel}
+                          </span>
+                        )}
+                      </div>
 
-                    <div>
-                      <p className="text-xs tracking-[0.2em] uppercase text-neutral-500 mb-2">Usage</p>
-                      <p className="text-white font-light">
-                        {invite.current_uses} / {invite.max_uses}
-                      </p>
-                      <div className="w-full bg-neutral-800 rounded-full h-1 mt-2">
-                        <div
-                          className="bg-cyan-600 h-1 rounded-full transition-all duration-300"
-                          style={{ width: `${getUsagePercentage(invite.current_uses, invite.max_uses)}%` }}
-                        />
+                      <div>
+                        <p className="text-xs tracking-[0.2em] uppercase text-neutral-500 mb-2">Status</p>
+                        <p className={`font-light text-sm tracking-[0.15em] uppercase ${getStatusColor(invite)}`}>
+                          {getStatusText(invite)}
+                        </p>
+                      </div>
+
+                      <div>
+                        <p className="text-xs tracking-[0.2em] uppercase text-neutral-500 mb-2">Usage</p>
+                        <p className="text-white font-light">{invite.current_uses} / {invite.max_uses}</p>
+                        <div className="w-full bg-neutral-800 h-1 mt-2 rounded-full overflow-hidden">
+                          <div
+                            className="bg-cyan-600 h-1 rounded-full transition-all duration-300"
+                            style={{ width: `${usagePercent}%` }}
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <p className="text-xs tracking-[0.2em] uppercase text-neutral-500 mb-2">Created By</p>
+                        <p className="text-white font-light text-sm">{invite.admins?.username || "Unknown"}</p>
+                      </div>
+
+                      <div>
+                        <p className="text-xs tracking-[0.2em] uppercase text-neutral-500 mb-2">Created</p>
+                        <p className="text-white font-light text-sm">
+                          {new Date(invite.created_at).toLocaleDateString()}
+                        </p>
                       </div>
                     </div>
 
-                    <div>
-                      <p className="text-xs tracking-[0.2em] uppercase text-neutral-500 mb-2">Created By</p>
-                      <p className="text-white font-light text-sm">
-                        {invite.admin?.username || "Unknown"}
-                      </p>
-                    </div>
-
-                    <div>
-                      <p className="text-xs tracking-[0.2em] uppercase text-neutral-500 mb-2">Created</p>
-                      <p className="text-white font-light text-sm">
-                        {new Date(invite.created_at).toLocaleDateString()}
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Action Buttons */}
-                  <div className="border-t border-neutral-800 pt-4 flex gap-3">
-                    {!invite.revoked_at && !invite.redeemed && (
-                      <button
-                        onClick={() => handleRevokeInvite(invite.id)}
-                        className="px-4 py-2 text-xs tracking-[0.2em] uppercase text-red-400 border border-red-400/30 hover:border-red-400 hover:bg-red-400/5 transition-all duration-300 rounded"
-                      >
-                        Revoke
-                      </button>
+                    {/* Comment */}
+                    {invite.comment && (
+                      <div className="mb-4 px-3 py-2 bg-neutral-900/60 border-l-2 border-neutral-700">
+                        <p className="text-[11px] text-neutral-400 tracking-[0.1em]">{invite.comment}</p>
+                      </div>
                     )}
-                    <button
-                      onClick={() => {
-                        if (confirm("Delete this invitation code permanently? This cannot be undone.")) {
-                          handleDeleteInvite(invite.id)
-                        }
-                      }}
-                      className="px-4 py-2 text-xs tracking-[0.2em] uppercase text-neutral-500 border border-neutral-800 hover:border-red-400/50 hover:text-red-400 transition-all duration-300 rounded"
-                    >
-                      Delete
-                    </button>
+
+                    {/* Action Buttons */}
+                    <div className="border-t border-neutral-800 pt-4 flex gap-3">
+                      {!invite.revoked_at && !invite.redeemed && (
+                        <button
+                          onClick={() => handleRevokeInvite(invite.id)}
+                          className="px-4 py-2 text-xs tracking-[0.2em] uppercase text-red-400 border border-red-400/30 hover:border-red-400 hover:bg-red-400/5 transition-all duration-300 rounded"
+                        >
+                          Revoke
+                        </button>
+                      )}
+                      <button
+                        onClick={() => {
+                          if (confirm("Delete this invitation code permanently? This cannot be undone.")) {
+                            handleDeleteInvite(invite.id)
+                          }
+                        }}
+                        className="px-4 py-2 text-xs tracking-[0.2em] uppercase text-neutral-500 border border-neutral-800 hover:border-red-400/50 hover:text-red-400 transition-all duration-300 rounded"
+                      >
+                        Delete
+                      </button>
+                    </div>
                   </div>
-                </div>
-              ))
+                )
+              })
             )}
           </div>
         </div>
 
         {/* Footer */}
         <div className="flex justify-between items-center px-6 md:px-16 py-12 border-t border-neutral-800">
-          <div className="text-[10px] tracking-[0.3em] uppercase text-neutral-700 font-light">
-            Invitation Manager
-          </div>
-          <div className="text-[10px] tracking-[0.3em] uppercase text-neutral-700 font-light">
-            © 2026
-          </div>
+          <div className="text-[10px] tracking-[0.3em] uppercase text-neutral-700 font-light">Invitation Manager</div>
+          <div className="text-[10px] tracking-[0.3em] uppercase text-neutral-700 font-light">© 2026</div>
         </div>
       </div>
     </div>

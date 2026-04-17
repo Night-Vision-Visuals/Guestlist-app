@@ -2,18 +2,15 @@
  * @file /api/invite/create/route.ts
  * POST /api/invite/create
  *
- * Generates a new random 6-character uppercase hex invite code (e.g. "A3F9C1")
- * and stores it in `invite_codes` as plain text (in the `code_hash` column).
+ * Generates a new random 6-character uppercase hex invite code and stores it
+ * in `invite_codes`.
  *
  * Body parameters:
- *   max_uses   {number}  1–100  — how many guests can use this code
- *   invite_type {string}        — optional label: guestlist | friend | vip |
- *                                 instagram | whatsapp | socialmedia (default: guestlist)
- *   event_id   {string}         — optional UUID of the event to associate the code with
- *
- * The generated code is returned in the response so the admin can copy and share
- * it. It is never hashed — plain text comparison is used throughout the app for
- * code validation.
+ *   tier      {string}  guest | friendlist | crew  (required)
+ *   max_uses  {number}  1–100  — only respected for "guest" tier;
+ *                               friendlist and crew are locked to max_uses = 1
+ *   comment   {string}  optional admin-facing note
+ *   event_id  {string}  optional UUID of the event
  *
  * Auth: admin JWT cookie required.
  */
@@ -22,42 +19,38 @@ import { supabase } from "@/lib/supabase"
 import { verifyAdminSession } from "@/lib/auth"
 import crypto from "crypto"
 
+const VALID_TIERS = ["guest", "friendlist", "crew"]
+
 export async function POST(req: Request) {
   try {
-    console.log("Create invitation endpoint called")
-
-    // Check if admin is authenticated
     const admin = await verifyAdminSession()
-
     if (!admin) {
-      console.log("Not authenticated")
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      )
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    console.log("Admin authenticated:", admin.username, "ID:", admin.adminId)
-
     const body = await req.json()
-    const { max_uses, event_id, invite_type } = body
+    const { tier, comment, event_id } = body
+    let { max_uses } = body
 
-    console.log("Create invitation with:", { max_uses, event_id })
+    // Validate tier
+    const resolvedTier = VALID_TIERS.includes(tier) ? tier : "guest"
 
-    // Validate input
-    if (!max_uses || max_uses < 1 || max_uses > 100) {
-      return NextResponse.json(
-        { error: "max_uses must be between 1 and 100" },
-        { status: 400 }
-      )
+    // Enforce max_uses = 1 for friendlist and crew
+    if (resolvedTier === "friendlist" || resolvedTier === "crew") {
+      max_uses = 1
+    } else {
+      max_uses = parseInt(max_uses)
+      if (!max_uses || max_uses < 1 || max_uses > 100) {
+        return NextResponse.json(
+          { error: "max_uses must be between 1 and 100" },
+          { status: 400 }
+        )
+      }
     }
 
     // Generate a random 6-character code (plain text)
     const rawCode = crypto.randomBytes(3).toString("hex").toUpperCase()
-    
-    console.log("Generated code:", rawCode)
 
-    // Insert into database - store the code as plain text in code_hash column
     const { data: invite, error: insertError } = await supabase
       .from("invite_codes")
       .insert([
@@ -67,7 +60,8 @@ export async function POST(req: Request) {
           current_uses: 0,
           redeemed: false,
           created_by_admin_id: admin.adminId,
-          invite_type: invite_type || "guestlist",
+          tier: resolvedTier,
+          comment: comment || null,
           ...(event_id ? { event_id } : {})
         }
       ])
@@ -82,19 +76,14 @@ export async function POST(req: Request) {
     }
 
     if (!invite || invite.length === 0) {
-      console.error("No invite returned from insert")
-      return NextResponse.json(
-        { error: "Failed to create invitation code" },
-        { status: 500 }
-      )
+      return NextResponse.json({ error: "Failed to create invitation code" }, { status: 500 })
     }
-
-    console.log("Invitation created:", invite[0].id)
 
     return NextResponse.json({
       success: true,
       code: rawCode,
       id: invite[0].id,
+      tier: resolvedTier,
       max_uses: invite[0].max_uses,
       created_at: invite[0].created_at,
       message: "Code created successfully."

@@ -52,7 +52,7 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json()
-    const { name, event_date, description, guest_limit, poster_url, min_age, max_age } = body
+    const { name, event_date, description, guest_limit, poster_url, min_age, max_age, entry_fee, friendlist_discount } = body
 
     if (!name || !event_date) {
       return NextResponse.json({ error: "Event name and date are required" }, { status: 400 })
@@ -66,6 +66,8 @@ export async function POST(req: Request) {
       poster_url: poster_url || null,
       min_age: min_age ? parseInt(min_age) : 18,
       max_age: max_age ? parseInt(max_age) : null,
+      entry_fee: entry_fee !== undefined && entry_fee !== "" ? parseFloat(entry_fee) : null,
+      friendlist_discount: friendlist_discount !== undefined && friendlist_discount !== "" ? parseInt(friendlist_discount) : null,
     }
 
     const { data: event, error } = await supabase
@@ -92,7 +94,7 @@ export async function PATCH(req: Request) {
     }
 
     const body = await req.json()
-    const { id, name, event_date, description, guest_limit, poster_url, min_age, max_age } = body
+    const { id, name, event_date, description, guest_limit, poster_url, min_age, max_age, entry_fee, friendlist_discount } = body
 
     if (!id) {
       return NextResponse.json({ error: "Event ID is required" }, { status: 400 })
@@ -106,6 +108,8 @@ export async function PATCH(req: Request) {
     if (poster_url !== undefined) updateData.poster_url = poster_url || null
     if (min_age !== undefined) updateData.min_age = min_age ? parseInt(min_age) : 18
     if (max_age !== undefined) updateData.max_age = max_age ? parseInt(max_age) : null
+    if (entry_fee !== undefined) updateData.entry_fee = entry_fee !== "" ? parseFloat(entry_fee) : null
+    if (friendlist_discount !== undefined) updateData.friendlist_discount = friendlist_discount !== "" ? parseInt(friendlist_discount) : null
 
     const { error } = await supabase
       .from("events")

@@ -41,7 +41,7 @@ export async function GET(req: Request) {
       .from("invite_codes")
       .select(`
         *,
-        admin:created_by_admin_id (
+        admins:created_by_admin_id (
           id,
           username
         )
