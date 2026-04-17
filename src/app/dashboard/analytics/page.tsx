@@ -142,6 +142,7 @@ export default function AnalyticsPage() {
   const [demoFilter, setDemoFilter] = useState<"all" | "approved">("all")
   const [ageGenderFilter, setAgeGenderFilter] = useState<AgeGenderFilter>("all")
   const [showCodeBreakdown, setShowCodeBreakdown] = useState(false)
+  const [showTierBreakdown, setShowTierBreakdown] = useState(false)
 
   useEffect(() => {
     if (currentEvent) fetchAnalytics(currentEvent.id)
@@ -301,7 +302,7 @@ export default function AnalyticsPage() {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
                       <div className="border border-neutral-800 p-6">
                         <p className="text-xs tracking-[0.2em] uppercase text-neutral-500 mb-3">Projected (Approved)</p>
-                        <p className="text-4xl font-light text-emerald-400">€{fmt(analytics.incomeStats.projectedApproved)}</p>
+                        <p className="text-4xl font-light text-cyan-400">€{fmt(analytics.incomeStats.projectedApproved)}</p>
                         <p className="text-xs text-neutral-600 mt-1">
                           {analytics.statistics.approved} approved guests · €{analytics.incomeStats.entryFee} base fee
                           {analytics.incomeStats.friendlistDiscount != null
@@ -311,67 +312,75 @@ export default function AnalyticsPage() {
                       </div>
                       <div className="border border-neutral-800 p-6">
                         <p className="text-xs tracking-[0.2em] uppercase text-neutral-500 mb-3">Actual (Checked In)</p>
-                        <p className="text-4xl font-light text-cyan-400">€{fmt(analytics.incomeStats.projectedCheckedIn)}</p>
+                        <p className="text-4xl font-light text-emerald-400">€{fmt(analytics.incomeStats.projectedCheckedIn)}</p>
                         <p className="text-xs text-neutral-600 mt-1">
                           {analytics.statistics.checkedIn} guests checked in
                         </p>
                       </div>
                     </div>
 
-                    {/* Breakdown table */}
-                    <div className="border border-neutral-800 p-6">
-                      <h3 className="text-xs tracking-[0.3em] uppercase text-neutral-600 mb-4">Breakdown by Tier</h3>
-                      <div className="overflow-x-auto">
-                        <table className="w-full text-sm">
-                          <thead>
-                            <tr className="border-b border-neutral-800">
-                              {["Tier", "Approved", "Revenue (proj.)", "Checked In", "Revenue (actual)"].map(h => (
-                                <th key={h} className="text-left text-[10px] tracking-[0.2em] uppercase text-neutral-600 pb-3 pr-6 last:pr-0">{h}</th>
-                              ))}
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {[
-                              {
-                                label: "Guest (code)",
-                                approvedCount: analytics.incomeStats.breakdown.approved.guestCount,
-                                approvedRev:   analytics.incomeStats.breakdown.approved.guestRev,
-                                ciCount:       analytics.incomeStats.breakdown.checkedIn.guestCount,
-                                ciRev:         analytics.incomeStats.breakdown.checkedIn.guestRev,
-                              },
-                              {
-                                label: "Friendlist",
-                                approvedCount: analytics.incomeStats.breakdown.approved.friendlistCount,
-                                approvedRev:   analytics.incomeStats.breakdown.approved.friendlistRev,
-                                ciCount:       analytics.incomeStats.breakdown.checkedIn.friendlistCount,
-                                ciRev:         analytics.incomeStats.breakdown.checkedIn.friendlistRev,
-                              },
-                              {
-                                label: "Crew (free)",
-                                approvedCount: analytics.incomeStats.breakdown.approved.crewCount,
-                                approvedRev:   0,
-                                ciCount:       analytics.incomeStats.breakdown.checkedIn.crewCount,
-                                ciRev:         0,
-                              },
-                              {
-                                label: "Direct (no code)",
-                                approvedCount: analytics.incomeStats.breakdown.approved.unknownCount,
-                                approvedRev:   analytics.incomeStats.breakdown.approved.unknownRev,
-                                ciCount:       analytics.incomeStats.breakdown.checkedIn.unknownCount,
-                                ciRev:         analytics.incomeStats.breakdown.checkedIn.unknownRev,
-                              },
-                            ].map(row => (
-                              <tr key={row.label} className="border-b border-neutral-900">
-                                <td className="py-3 pr-6 text-neutral-300 font-light">{row.label}</td>
-                                <td className="py-3 pr-6 text-neutral-400">{row.approvedCount}</td>
-                                <td className="py-3 pr-6 text-emerald-400 font-mono">€{fmt(row.approvedRev)}</td>
-                                <td className="py-3 pr-6 text-neutral-400">{row.ciCount}</td>
-                                <td className="py-3 text-cyan-400 font-mono">€{fmt(row.ciRev)}</td>
+                    {/* Breakdown table — collapsible */}
+                    <div className="border border-neutral-800">
+                      <button
+                        onClick={() => setShowTierBreakdown(!showTierBreakdown)}
+                        className="w-full flex items-center justify-between px-6 py-4 text-left hover:bg-neutral-900/40 transition-colors"
+                      >
+                        <span className="text-xs tracking-[0.3em] uppercase text-neutral-500">Breakdown by Tier</span>
+                        <span className="text-neutral-600 text-xs">{showTierBreakdown ? "▲ Hide" : "▼ Show"}</span>
+                      </button>
+                      {showTierBreakdown && (
+                        <div className="overflow-x-auto border-t border-neutral-800 px-6 py-4">
+                          <table className="w-full text-sm">
+                            <thead>
+                              <tr className="border-b border-neutral-800">
+                                {["Tier", "Approved", "Revenue (proj.)", "Checked In", "Revenue (actual)"].map(h => (
+                                  <th key={h} className="text-left text-[10px] tracking-[0.2em] uppercase text-neutral-600 pb-3 pr-6 last:pr-0">{h}</th>
+                                ))}
                               </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
+                            </thead>
+                            <tbody>
+                              {[
+                                {
+                                  label: "Guest (code)",
+                                  approvedCount: analytics.incomeStats.breakdown.approved.guestCount,
+                                  approvedRev:   analytics.incomeStats.breakdown.approved.guestRev,
+                                  ciCount:       analytics.incomeStats.breakdown.checkedIn.guestCount,
+                                  ciRev:         analytics.incomeStats.breakdown.checkedIn.guestRev,
+                                },
+                                {
+                                  label: "Friendlist",
+                                  approvedCount: analytics.incomeStats.breakdown.approved.friendlistCount,
+                                  approvedRev:   analytics.incomeStats.breakdown.approved.friendlistRev,
+                                  ciCount:       analytics.incomeStats.breakdown.checkedIn.friendlistCount,
+                                  ciRev:         analytics.incomeStats.breakdown.checkedIn.friendlistRev,
+                                },
+                                {
+                                  label: "Crew (free)",
+                                  approvedCount: analytics.incomeStats.breakdown.approved.crewCount,
+                                  approvedRev:   0,
+                                  ciCount:       analytics.incomeStats.breakdown.checkedIn.crewCount,
+                                  ciRev:         0,
+                                },
+                                {
+                                  label: "Direct (no code)",
+                                  approvedCount: analytics.incomeStats.breakdown.approved.unknownCount,
+                                  approvedRev:   analytics.incomeStats.breakdown.approved.unknownRev,
+                                  ciCount:       analytics.incomeStats.breakdown.checkedIn.unknownCount,
+                                  ciRev:         analytics.incomeStats.breakdown.checkedIn.unknownRev,
+                                },
+                              ].map(row => (
+                                <tr key={row.label} className="border-b border-neutral-900">
+                                  <td className="py-3 pr-6 text-neutral-300 font-light">{row.label}</td>
+                                  <td className="py-3 pr-6 text-neutral-400">{row.approvedCount}</td>
+                                  <td className="py-3 pr-6 text-cyan-400 font-mono">€{fmt(row.approvedRev)}</td>
+                                  <td className="py-3 pr-6 text-neutral-400">{row.ciCount}</td>
+                                  <td className="py-3 text-emerald-400 font-mono">€{fmt(row.ciRev)}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
                     </div>
                   </>
                 )}

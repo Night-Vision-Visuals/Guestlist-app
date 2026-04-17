@@ -131,7 +131,7 @@ export async function GET(req: Request) {
     const codes = inviteCodes || []
     const totalInviteCodes      = codes.length
     const totalInvitesGenerated = codes.reduce((s: number, c: any) => s + c.max_uses, 0)
-    const totalInvitesUsed      = codes.reduce((s: number, c: any) => s + c.current_uses, 0)
+    const totalInvitesUsed      = codes.reduce((s: number, c: any) => s + c.current_uses + (c.declined_at != null ? 1 : 0), 0)
     const totalDeclined         = codes.filter((c: any) => c.declined_at != null).length
 
     // Build a map from invite_code_id → tier for income calculation
@@ -146,7 +146,7 @@ export async function GET(req: Request) {
 
     const calcGuestPrice = (app: any): number => {
       if (entryFee === null) return 0
-      const tier = app.invite_code_id ? (codeToTier[app.invite_code_id] || "guest") : "guest"
+      const tier = app.invitation_code_id ? (codeToTier[app.invitation_code_id] || "guest") : "guest"
       if (tier === "crew") return 0
       if (tier === "friendlist") {
         const discount = friendlistDiscount ?? 0
@@ -166,11 +166,11 @@ export async function GET(req: Request) {
       let unknownCount = 0, unknownRev = 0
 
       list.forEach((a: any) => {
-        const tier = a.invite_code_id ? (codeToTier[a.invite_code_id] || "guest") : "guest"
+        const tier = a.invitation_code_id ? (codeToTier[a.invitation_code_id] || "guest") : "guest"
         const price = calcGuestPrice(a)
         if (tier === "crew") { crewCount++ }
         else if (tier === "friendlist") { friendlistCount++; friendlistRev += price }
-        else if (a.invite_code_id) { guestCount++; guestRev += price }
+        else if (a.invitation_code_id) { guestCount++; guestRev += price }
         else { unknownCount++; unknownRev += price }
       })
 
@@ -206,9 +206,9 @@ export async function GET(req: Request) {
       }
       adminMap[adminId].codesCreated++
       adminMap[adminId].totalCapacity += code.max_uses
-      adminMap[adminId].totalUsed     += code.current_uses
+      adminMap[adminId].totalUsed     += code.current_uses + (code.declined_at != null ? 1 : 0)
 
-      const linkedApps = apps.filter((a: any) => a.invite_code_id === code.id)
+      const linkedApps = apps.filter((a: any) => a.invitation_code_id === code.id)
       adminMap[adminId].approvedGuests  += linkedApps.filter((a: any) => a.status === "approved").length
       adminMap[adminId].checkedInGuests += linkedApps.filter((a: any) => a.checked_in).length
     }
@@ -227,8 +227,8 @@ export async function GET(req: Request) {
       comment:     c.comment || null,
       createdBy:   (c.admins as any)?.username || "Unknown",
       maxUses:     c.max_uses,
-      currentUses: c.current_uses,
-      usageRate:   c.max_uses > 0 ? Math.round((c.current_uses / c.max_uses) * 100) : 0,
+      currentUses: c.current_uses + (c.declined_at != null ? 1 : 0),
+      usageRate:   c.max_uses > 0 ? Math.round(((c.current_uses + (c.declined_at != null ? 1 : 0)) / c.max_uses) * 100) : 0,
       status:      c.revoked_at ? "revoked" : c.declined_at ? "declined" : c.redeemed ? "fully used" : c.current_uses >= c.max_uses ? "exhausted" : "active",
       createdAt:   c.created_at,
     }))
