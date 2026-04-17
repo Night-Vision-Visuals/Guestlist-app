@@ -16,6 +16,11 @@
  *   "waitlist"  — sets status "waitlist"
  *   "cancelled" — sets status "cancelled" (guest-initiated; not treated as no-show)
  *
+ * Email behaviour:
+ *   If the event's batch_email_sent flag is true (batch was already sent),
+ *   newly approved or rejected guests receive their email immediately.
+ *   Otherwise they are queued and will be included in the next batch send.
+ *
  * The 130-guest cap is hardcoded here. Adjust it if the venue capacity changes.
  *
  * Returns { success: true, qr_token? } on success.
@@ -26,6 +31,7 @@ import { NextResponse } from "next/server"
 import { supabase } from "@/lib/supabase"
 import { verifyAdminSession } from "@/lib/auth"
 import { v4 as uuidv4 } from "uuid"
+import { isBatchSent, sendSingleEmail } from "@/lib/sendEmails"
 
 export async function POST(req: Request) {
   try {
@@ -81,6 +87,16 @@ export async function POST(req: Request) {
       updateData.qr_token = qrToken
     }
 
+    const { data: appRow, error: fetchError } = await supabase
+      .from("applications")
+      .select("event_id")
+      .eq("id", id)
+      .single()
+
+    if (fetchError || !appRow) {
+      return NextResponse.json({ error: "Application not found" }, { status: 404 })
+    }
+
     const { error } = await supabase
       .from("applications")
       .update(updateData)
@@ -88,6 +104,17 @@ export async function POST(req: Request) {
 
     if (error) {
       return NextResponse.json({ error: "Update failed" }, { status: 500 })
+    }
+
+    // If batch has already been sent, email this guest immediately
+    if (newStatus === "approved" || newStatus === "rejected") {
+      const batchAlreadySent = await isBatchSent(appRow.event_id)
+      if (batchAlreadySent) {
+        // Fire-and-forget — don't block the response on email delivery
+        sendSingleEmail(id).catch((err) =>
+          console.error("Immediate email send failed for", id, err)
+        )
+      }
     }
 
     return NextResponse.json({ success: true, qr_token: qrToken })

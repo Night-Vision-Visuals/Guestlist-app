@@ -1,9 +1,9 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import { useEventContext } from "@/lib/EventContext"
-import { QrCode, Pencil, X, Check, LogIn, UserX, LayoutList, LayoutGrid } from "lucide-react"
+import { QrCode, Pencil, X, Check, LogIn, UserX, LayoutList, LayoutGrid, Mail, Send, Clock, CheckCheck } from "lucide-react"
 
 interface Application {
   id: string
@@ -24,6 +24,13 @@ interface Application {
   checked_in_at: string | null
   invite_type: string | null
   age_flagged: boolean | null
+  email_sent_at: string | null
+  email_type: string | null
+}
+
+interface EventEmailState {
+  batch_email_sent: boolean
+  scheduled_email_send_at: string | null
 }
 
 interface EditForm {
@@ -44,9 +51,46 @@ export default function DashboardPage() {
   const [editForm, setEditForm] = useState<EditForm>({ email: "", status: "" })
   const [checkingInId, setCheckingInId] = useState<string | null>(null)
 
+  // Email state
+  const [eventEmailState, setEventEmailState] = useState<EventEmailState | null>(null)
+  const [isSendingEmails, setIsSendingEmails] = useState(false)
+  const [sendResult, setSendResult] = useState<{ sent: number; failed: number; errors: string[] } | null>(null)
+  const [scheduledAt, setScheduledAt] = useState("")
+  const [isSavingSchedule, setIsSavingSchedule] = useState(false)
+  const [showEmailPanel, setShowEmailPanel] = useState(false)
+
+  const fetchEventEmailState = useCallback(async (eventId: string) => {
+    try {
+      const res = await fetch(`/api/events/email-state?eventId=${eventId}`, { credentials: "include" })
+      if (res.ok) {
+        const data = await res.json()
+        setEventEmailState(data)
+        if (data.scheduled_email_send_at) {
+          // Format for datetime-local input: "YYYY-MM-DDTHH:MM"
+          setScheduledAt(data.scheduled_email_send_at.slice(0, 16))
+        } else {
+          setScheduledAt("")
+        }
+      }
+    } catch {
+      // non-critical, silently ignore
+    }
+  }, [])
+
+  // Trigger scheduled email check on dashboard load (silent)
+  const triggerScheduledCheck = useCallback(async () => {
+    try {
+      await fetch("/api/cron/send-scheduled-emails", { credentials: "include" })
+    } catch {
+      // non-critical
+    }
+  }, [])
+
   useEffect(() => {
     if (currentEvent) {
       fetchApplications(currentEvent.id)
+      fetchEventEmailState(currentEvent.id)
+      triggerScheduledCheck()
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentEvent])
@@ -91,6 +135,73 @@ export default function DashboardPage() {
     } catch (err) {
       console.error(err)
       setError("Error updating status")
+    }
+  }
+
+  const handleSendEmails = async () => {
+    if (!currentEvent) return
+    if (!confirm(`Send emails to all pending approved/rejected guests for "${currentEvent.name}"? This cannot be undone.`)) return
+    setIsSendingEmails(true)
+    setSendResult(null)
+    try {
+      const res = await fetch("/api/send-emails", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ eventId: currentEvent.id }),
+        credentials: "include"
+      })
+      const data = await res.json()
+      if (!res.ok) { setError(data.error || "Failed to send emails"); return }
+      setSendResult({ sent: data.sent, failed: data.failed, errors: data.errors })
+      fetchApplications(currentEvent.id)
+      fetchEventEmailState(currentEvent.id)
+    } catch (err) {
+      console.error(err)
+      setError("Error sending emails")
+    } finally {
+      setIsSendingEmails(false)
+    }
+  }
+
+  const handleSaveSchedule = async () => {
+    if (!currentEvent) return
+    setIsSavingSchedule(true)
+    try {
+      const res = await fetch("/api/events/schedule-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          eventId: currentEvent.id,
+          scheduledAt: scheduledAt ? new Date(scheduledAt).toISOString() : null,
+        }),
+        credentials: "include"
+      })
+      if (!res.ok) { const d = await res.json(); setError(d.error || "Failed to save schedule"); return }
+      fetchEventEmailState(currentEvent.id)
+    } catch (err) {
+      console.error(err)
+      setError("Error saving schedule")
+    } finally {
+      setIsSavingSchedule(false)
+    }
+  }
+
+  const handleClearSchedule = async () => {
+    if (!currentEvent) return
+    setScheduledAt("")
+    setIsSavingSchedule(true)
+    try {
+      await fetch("/api/events/schedule-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ eventId: currentEvent.id, scheduledAt: null }),
+        credentials: "include"
+      })
+      fetchEventEmailState(currentEvent.id)
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setIsSavingSchedule(false)
     }
   }
 
@@ -222,6 +333,142 @@ export default function DashboardPage() {
             <div className="h-px bg-gradient-to-r from-white/40 to-transparent w-20" />
           </div>
 
+          {/* Email Panel */}
+          <div className="mb-8 border border-neutral-800 bg-neutral-900/30">
+            <button
+              onClick={() => setShowEmailPanel(v => !v)}
+              className="w-full px-5 py-4 flex items-center justify-between text-left hover:bg-neutral-900/50 transition-all duration-200"
+            >
+              <div className="flex items-center gap-3">
+                <Mail size={14} className="text-neutral-400" />
+                <span className="text-xs tracking-[0.2em] uppercase text-neutral-300">Email Dispatch</span>
+                {eventEmailState?.batch_email_sent && (
+                  <span className="text-[10px] px-2 py-0.5 rounded border text-emerald-400 border-emerald-400/30 bg-emerald-400/10 tracking-[0.1em]">
+                    Batch Sent
+                  </span>
+                )}
+                {!eventEmailState?.batch_email_sent && eventEmailState?.scheduled_email_send_at && (
+                  <span className="text-[10px] px-2 py-0.5 rounded border text-yellow-400 border-yellow-400/30 bg-yellow-400/10 tracking-[0.1em]">
+                    Scheduled
+                  </span>
+                )}
+              </div>
+              <span className="text-neutral-600 text-xs">{showEmailPanel ? "▲" : "▼"}</span>
+            </button>
+
+            {showEmailPanel && (
+              <div className="px-5 pb-5 border-t border-neutral-800 space-y-5">
+                {/* Status summary */}
+                <div className="pt-4 grid grid-cols-2 md:grid-cols-4 gap-3">
+                  {(() => {
+                    const pending = applications.filter(a => (a.status === "approved" || a.status === "rejected") && !a.email_sent_at).length
+                    const sent = applications.filter(a => a.email_sent_at).length
+                    const approved = applications.filter(a => a.status === "approved").length
+                    const rejected = applications.filter(a => a.status === "rejected").length
+                    return (
+                      <>
+                        <div className="border border-neutral-800 p-3">
+                          <p className="text-[9px] tracking-[0.25em] uppercase text-neutral-600 mb-1">Emails Sent</p>
+                          <p className="text-xl font-light text-emerald-400">{sent}</p>
+                        </div>
+                        <div className="border border-neutral-800 p-3">
+                          <p className="text-[9px] tracking-[0.25em] uppercase text-neutral-600 mb-1">Pending Send</p>
+                          <p className="text-xl font-light text-yellow-400">{pending}</p>
+                        </div>
+                        <div className="border border-neutral-800 p-3">
+                          <p className="text-[9px] tracking-[0.25em] uppercase text-neutral-600 mb-1">Approved</p>
+                          <p className="text-xl font-light text-white">{approved}</p>
+                        </div>
+                        <div className="border border-neutral-800 p-3">
+                          <p className="text-[9px] tracking-[0.25em] uppercase text-neutral-600 mb-1">Rejected</p>
+                          <p className="text-xl font-light text-white">{rejected}</p>
+                        </div>
+                      </>
+                    )
+                  })()}
+                </div>
+
+                {/* Send result feedback */}
+                {sendResult && (
+                  <div className={`p-3 border text-xs tracking-[0.1em] ${sendResult.failed > 0 ? "border-yellow-400/30 bg-yellow-400/5 text-yellow-300" : "border-emerald-400/30 bg-emerald-400/5 text-emerald-300"}`}>
+                    {sendResult.sent} email{sendResult.sent !== 1 ? "s" : ""} sent
+                    {sendResult.failed > 0 && ` — ${sendResult.failed} failed`}
+                    {sendResult.errors.length > 0 && (
+                      <ul className="mt-1 text-red-400 list-disc list-inside space-y-0.5">
+                        {sendResult.errors.map((e, i) => <li key={i}>{e}</li>)}
+                      </ul>
+                    )}
+                  </div>
+                )}
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                  {/* Manual send */}
+                  <div className="space-y-3">
+                    <p className="text-[10px] tracking-[0.25em] uppercase text-neutral-500">Send Now</p>
+                    <p className="text-xs text-neutral-500 leading-relaxed">
+                      Send emails immediately to all approved and rejected guests who have not yet received one.
+                      {eventEmailState?.batch_email_sent && " Batch already sent — new approvals/rejections will be emailed instantly."}
+                    </p>
+                    <button
+                      onClick={handleSendEmails}
+                      disabled={isSendingEmails}
+                      className="flex items-center gap-2 px-4 py-2.5 text-xs tracking-[0.15em] uppercase text-white border border-white/20 hover:border-white/60 hover:bg-white/5 transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                      {isSendingEmails ? (
+                        <>
+                          <span className="animate-spin">⟳</span> Sending...
+                        </>
+                      ) : (
+                        <>
+                          <Send size={12} /> Send Emails
+                        </>
+                      )}
+                    </button>
+                  </div>
+
+                  {/* Scheduled send */}
+                  <div className="space-y-3">
+                    <p className="text-[10px] tracking-[0.25em] uppercase text-neutral-500">Schedule Auto-Send</p>
+                    <p className="text-xs text-neutral-500 leading-relaxed">
+                      Set a date and time for emails to be sent automatically. Checked when the dashboard is opened.
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="datetime-local"
+                        value={scheduledAt}
+                        onChange={(e) => setScheduledAt(e.target.value)}
+                        className="flex-1 bg-transparent border-b border-neutral-700 py-2 text-white text-xs focus:outline-none focus:border-neutral-500 [color-scheme:dark]"
+                      />
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={handleSaveSchedule}
+                        disabled={isSavingSchedule || !scheduledAt}
+                        className="flex items-center gap-2 px-4 py-2 text-xs tracking-[0.15em] uppercase text-emerald-400 border border-emerald-400/30 hover:border-emerald-400 hover:bg-emerald-400/5 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                      >
+                        <Clock size={12} /> Save Schedule
+                      </button>
+                      {eventEmailState?.scheduled_email_send_at && (
+                        <button
+                          onClick={handleClearSchedule}
+                          disabled={isSavingSchedule}
+                          className="px-3 py-2 text-xs tracking-[0.1em] uppercase text-neutral-500 border border-neutral-800 hover:border-neutral-600 hover:text-neutral-300 transition-all"
+                        >
+                          Clear
+                        </button>
+                      )}
+                    </div>
+                    {eventEmailState?.scheduled_email_send_at && (
+                      <p className="text-[10px] text-neutral-600 tracking-[0.1em]">
+                        Scheduled: {new Date(eventEmailState.scheduled_email_send_at).toLocaleString()}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
           {error && (
             <div className="mb-8 text-sm tracking-[0.15em] py-3 px-4 border border-red-400/30 text-red-400 bg-red-400/5">
               {error}
@@ -325,6 +572,14 @@ export default function DashboardPage() {
                         <span className={`text-[10px] px-2 py-0.5 rounded border tracking-[0.15em] uppercase font-light whitespace-nowrap ${getStatusBadge(app.status)}`}>
                           {app.status}{app.checked_in ? " ✓" : ""}
                         </span>
+                        {(app.status === "approved" || app.status === "rejected") && (
+                          <span title={app.email_sent_at ? `Email sent ${new Date(app.email_sent_at).toLocaleString()}` : "Email not sent yet"}>
+                            {app.email_sent_at
+                              ? <CheckCheck size={13} className="text-emerald-500 shrink-0" />
+                              : <Mail size={13} className="text-neutral-700 shrink-0" />
+                            }
+                          </span>
+                        )}
                         <span className="text-neutral-600 text-xs hidden md:block">{new Date(app.created_at).toLocaleDateString()}</span>
 
                         {/* Action icons */}

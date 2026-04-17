@@ -11,12 +11,17 @@
  *   - If the application doesn't already have a `qr_token`, one is generated
  *     (UUID v4). This token powers the `/ticket/[token]` QR ticket page.
  *
+ * Email behaviour:
+ *   If the event's batch_email_sent flag is true (batch was already sent),
+ *   newly approved or rejected guests receive their email immediately.
+ *
  * Auth: admin JWT cookie required.
  */
 import { NextResponse } from "next/server"
 import { supabase } from "@/lib/supabase"
 import { verifyAdminSession } from "@/lib/auth"
 import { v4 as uuidv4 } from "uuid"
+import { isBatchSent, sendSingleEmail } from "@/lib/sendEmails"
 
 export async function POST(req: Request) {
   try {
@@ -64,6 +69,24 @@ export async function POST(req: Request) {
 
     if (updateError) {
       return NextResponse.json({ error: "Failed to update application: " + updateError.message }, { status: 500 })
+    }
+
+    // If setting to approved or rejected, check if batch was already sent
+    if (status === "approved" || status === "rejected") {
+      const { data: appRow } = await supabase
+        .from("applications")
+        .select("event_id")
+        .eq("id", id)
+        .single()
+
+      if (appRow?.event_id) {
+        const batchAlreadySent = await isBatchSent(appRow.event_id)
+        if (batchAlreadySent) {
+          sendSingleEmail(id).catch((err) =>
+            console.error("Immediate email send failed for", id, err)
+          )
+        }
+      }
     }
 
     return NextResponse.json({ success: true, message: "Application updated successfully" })
