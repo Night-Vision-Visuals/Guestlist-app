@@ -237,14 +237,22 @@ export default function DashboardPage() {
         credentials: "include"
       })
       if (!res.ok) {
-        const data = await res.json()
-        setError(data.error || "Failed to update application")
+        let errorMsg = "Failed to update application"
+        try {
+          const data = await res.json()
+          errorMsg = data.error || errorMsg
+        } catch {
+          const text = await res.text().catch(() => "(no body)")
+          console.error("Non-JSON error response:", res.status, text)
+          errorMsg = `Server error ${res.status}`
+        }
+        setError(errorMsg)
         return
       }
       setEditingId(null)
       fetchApplications(currentEvent?.id)
     } catch (err) {
-      console.error(err)
+      console.error("Edit save fetch error:", err)
       setError("Error updating application")
     }
   }

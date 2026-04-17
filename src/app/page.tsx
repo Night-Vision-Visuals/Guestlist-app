@@ -197,7 +197,7 @@ export default function LandingPage() {
               className="h-100 w-100 object-contain mx-auto mb-6"
             />
             <p className="text-neutral-400 text-lg tracking-[0.2em] uppercase font-light max-w-2xl mx-auto">
-              Curated Events. Seamless Experience. Exclusive Access.
+              Liberate Your Mind. Acquire New Consciousness.
             </p>
           </div>
 
