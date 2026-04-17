@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import { useEventContext } from "@/lib/EventContext"
-import { QrCode, Pencil, X, Check, LogIn, UserX, LayoutList, LayoutGrid, Mail, Send, Clock, CheckCheck } from "lucide-react"
+import { QrCode, Pencil, X, Check, LogIn, UserX, LayoutList, LayoutGrid, Mail, Send, Clock, CheckCheck, MailCheck, SlidersHorizontal } from "lucide-react"
 
 interface Application {
   id: string
@@ -45,11 +45,18 @@ export default function DashboardPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState("")
   const [searchTerm, setSearchTerm] = useState("")
-  const [filterStatus, setFilterStatus] = useState("all")
+  const [filterStatuses, setFilterStatuses] = useState<string[]>([])
+  const [filterGenders, setFilterGenders] = useState<string[]>([])
+  const [filterAgeMin, setFilterAgeMin] = useState<number>(14)
+  const [filterAgeMax, setFilterAgeMax] = useState<number>(60)
+  const [filterCheckedIn, setFilterCheckedIn] = useState<"all" | "yes" | "no">("all")
+  const [showFilterPanel, setShowFilterPanel] = useState(false)
   const [viewMode, setViewMode] = useState<"overview" | "detailed">("overview")
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editForm, setEditForm] = useState<EditForm>({ email: "", status: "" })
   const [checkingInId, setCheckingInId] = useState<string | null>(null)
+  const [resendingEmailId, setResendingEmailId] = useState<string | null>(null)
+  const [resendResult, setResendResult] = useState<{ id: string; success: boolean; message: string } | null>(null)
 
   // Email state
   const [eventEmailState, setEventEmailState] = useState<EventEmailState | null>(null)
@@ -58,6 +65,15 @@ export default function DashboardPage() {
   const [scheduledAt, setScheduledAt] = useState("")
   const [isSavingSchedule, setIsSavingSchedule] = useState(false)
   const [showEmailPanel, setShowEmailPanel] = useState(false)
+
+  const calculateAge = (dateOfBirth: string): number => {
+    const today = new Date()
+    const birthDate = new Date(dateOfBirth)
+    let age = today.getFullYear() - birthDate.getFullYear()
+    const m = today.getMonth() - birthDate.getMonth()
+    if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) age--
+    return age
+  }
 
   const fetchEventEmailState = useCallback(async (eventId: string) => {
     try {
@@ -111,6 +127,14 @@ export default function DashboardPage() {
 
       const data = await res.json()
       setApplications(data || [])
+      // Reset age slider to actual data range on load
+      if (data && data.length > 0) {
+        const ages = (data as Application[]).map(a => calculateAge(a.date_of_birth)).filter((a: number) => !isNaN(a))
+        if (ages.length > 0) {
+          setFilterAgeMin(Math.min(...ages))
+          setFilterAgeMax(Math.max(...ages))
+        }
+      }
       setError("")
     } catch (err) {
       console.error("Fetch error:", err)
@@ -228,6 +252,31 @@ export default function DashboardPage() {
     }
   }
 
+  const handleResendEmail = async (id: string) => {
+    setResendingEmailId(id)
+    setResendResult(null)
+    try {
+      const res = await fetch("/api/resend-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id }),
+        credentials: "include"
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setResendResult({ id, success: false, message: data.error || "Failed to send email" })
+        return
+      }
+      setResendResult({ id, success: true, message: "Email sent" })
+      fetchApplications(currentEvent?.id)
+    } catch (err) {
+      console.error(err)
+      setResendResult({ id, success: false, message: "Error sending email" })
+    } finally {
+      setResendingEmailId(null)
+    }
+  }
+
   const handleEditSave = async (id: string) => {
     try {
       const res = await fetch("/api/edit-application", {
@@ -262,6 +311,32 @@ export default function DashboardPage() {
     setEditForm({ email: app.email, status: app.status })
   }
 
+  // Compute age range bounds from actual data
+  const allAges = applications.map(a => calculateAge(a.date_of_birth)).filter(a => !isNaN(a))
+  const dataAgeMin = allAges.length > 0 ? Math.min(...allAges) : 14
+  const dataAgeMax = allAges.length > 0 ? Math.max(...allAges) : 60
+
+  // Active filter count (for badge)
+  const activeFilterCount =
+    filterStatuses.length +
+    filterGenders.length +
+    (filterCheckedIn !== "all" ? 1 : 0) +
+    (filterAgeMin !== dataAgeMin || filterAgeMax !== dataAgeMax ? 1 : 0)
+
+  const resetFilters = () => {
+    setFilterStatuses([])
+    setFilterGenders([])
+    setFilterCheckedIn("all")
+    setFilterAgeMin(dataAgeMin)
+    setFilterAgeMax(dataAgeMax)
+  }
+
+  const toggleStatus = (s: string) =>
+    setFilterStatuses(prev => prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s])
+
+  const toggleGender = (g: string) =>
+    setFilterGenders(prev => prev.includes(g) ? prev.filter(x => x !== g) : [...prev, g])
+
   const filteredApplications = applications.filter((app) => {
     const q = searchTerm.toLowerCase()
     const matchesSearch =
@@ -269,18 +344,16 @@ export default function DashboardPage() {
       app.last_name.toLowerCase().includes(q) ||
       app.email.toLowerCase().includes(q) ||
       (app.instagram ?? "").toLowerCase().includes(q)
-    const matchesFilter = filterStatus === "all" || app.status === filterStatus
-    return matchesSearch && matchesFilter
+    const matchesStatus = filterStatuses.length === 0 || filterStatuses.includes(app.status)
+    const matchesGender = filterGenders.length === 0 || filterGenders.includes(app.gender ?? "")
+    const age = calculateAge(app.date_of_birth)
+    const matchesAge = age >= filterAgeMin && age <= filterAgeMax
+    const matchesCheckedIn =
+      filterCheckedIn === "all" ||
+      (filterCheckedIn === "yes" && !!app.checked_in) ||
+      (filterCheckedIn === "no" && !app.checked_in)
+    return matchesSearch && matchesStatus && matchesGender && matchesAge && matchesCheckedIn
   })
-
-  const calculateAge = (dateOfBirth: string): number => {
-    const today = new Date()
-    const birthDate = new Date(dateOfBirth)
-    let age = today.getFullYear() - birthDate.getFullYear()
-    const m = today.getMonth() - birthDate.getMonth()
-    if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) age--
-    return age
-  }
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -336,7 +409,7 @@ export default function DashboardPage() {
               </span>
             </h1>
             <p className="text-neutral-400 text-sm tracking-[0.2em] uppercase font-light">
-              {currentEvent?.name} — {currentEvent ? new Date(currentEvent.date + "T12:00:00").toLocaleDateString() : ""}
+              {currentEvent?.name} — {currentEvent?.date ? new Date(currentEvent.date.slice(0, 10) + "T12:00:00").toLocaleDateString() : ""}
             </p>
             <div className="h-px bg-gradient-to-r from-white/40 to-transparent w-20" />
           </div>
@@ -484,28 +557,182 @@ export default function DashboardPage() {
           )}
 
           {/* Controls */}
-          <div className="mb-8 space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="mb-8 space-y-3">
+            {/* Search + filter icon row */}
+            <div className="flex items-center gap-3">
               <input
                 type="text"
                 placeholder="Search by name, email, instagram..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="col-span-1 md:col-span-2 bg-transparent border-b border-neutral-800 px-0 py-3 text-white placeholder-neutral-600 focus:outline-none focus:border-neutral-600 transition-all duration-300 text-sm"
+                className="flex-1 bg-transparent border-b border-neutral-800 px-0 py-3 text-white placeholder-neutral-600 focus:outline-none focus:border-neutral-600 transition-all duration-300 text-sm"
               />
-              <select
-                value={filterStatus}
-                onChange={(e) => setFilterStatus(e.target.value)}
-                className="bg-transparent border-b border-neutral-800 px-0 py-3 text-white focus:outline-none focus:border-neutral-600 transition-all duration-300 text-sm"
+              <button
+                onClick={() => setShowFilterPanel(v => !v)}
+                title="Filters"
+                className={`relative flex items-center gap-2 px-3 py-2 border rounded transition-all duration-200 text-xs tracking-[0.15em] uppercase ${
+                  showFilterPanel || activeFilterCount > 0
+                    ? "border-white/40 text-white bg-white/5"
+                    : "border-neutral-800 text-neutral-500 hover:border-neutral-600 hover:text-white"
+                }`}
               >
-                <option value="all" className="bg-black">All Statuses</option>
-                <option value="applied" className="bg-black">Applied</option>
-                <option value="approved" className="bg-black">Approved</option>
-                <option value="rejected" className="bg-black">Rejected</option>
-                <option value="waitlist" className="bg-black">Waitlist</option>
-                <option value="cancelled" className="bg-black">Cancelled</option>
-              </select>
+                <SlidersHorizontal size={13} />
+                Filter
+                {activeFilterCount > 0 && (
+                  <span className="flex items-center justify-center w-4 h-4 text-[9px] rounded-full bg-white text-black font-medium">
+                    {activeFilterCount}
+                  </span>
+                )}
+              </button>
             </div>
+
+            {/* Collapsible filter panel */}
+            {showFilterPanel && (
+              <div className="border border-neutral-800 bg-neutral-900/40 p-5 space-y-5">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+
+                  {/* Status */}
+                  <div>
+                    <p className="text-[10px] tracking-[0.25em] uppercase text-neutral-500 mb-3">Status</p>
+                    <div className="space-y-2">
+                      {["applied","approved","rejected","waitlist","cancelled"].map(s => (
+                        <label key={s} className="flex items-center gap-2 cursor-pointer group">
+                          <div
+                            onClick={() => toggleStatus(s)}
+                            className={`w-3.5 h-3.5 border rounded-sm flex items-center justify-center transition-all cursor-pointer ${
+                              filterStatuses.includes(s) ? "border-white bg-white" : "border-neutral-600 group-hover:border-neutral-400"
+                            }`}
+                          >
+                            {filterStatuses.includes(s) && <Check size={9} className="text-black" />}
+                          </div>
+                          <span
+                            onClick={() => toggleStatus(s)}
+                            className="text-xs text-neutral-300 capitalize tracking-[0.1em] cursor-pointer"
+                          >
+                            {s}
+                          </span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Gender */}
+                  <div>
+                    <p className="text-[10px] tracking-[0.25em] uppercase text-neutral-500 mb-3">Gender</p>
+                    <div className="space-y-2">
+                      {[
+                        { value: "male", label: "Male" },
+                        { value: "female", label: "Female" },
+                        { value: "diverse", label: "Diverse" },
+                      ].map(({ value, label }) => (
+                        <label key={value} className="flex items-center gap-2 cursor-pointer group">
+                          <div
+                            onClick={() => toggleGender(value)}
+                            className={`w-3.5 h-3.5 border rounded-sm flex items-center justify-center transition-all cursor-pointer ${
+                              filterGenders.includes(value) ? "border-white bg-white" : "border-neutral-600 group-hover:border-neutral-400"
+                            }`}
+                          >
+                            {filterGenders.includes(value) && <Check size={9} className="text-black" />}
+                          </div>
+                          <span
+                            onClick={() => toggleGender(value)}
+                            className="text-xs text-neutral-300 tracking-[0.1em] cursor-pointer"
+                          >
+                            {label}
+                          </span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Check-in */}
+                  <div>
+                    <p className="text-[10px] tracking-[0.25em] uppercase text-neutral-500 mb-3">Check-in</p>
+                    <div className="space-y-2">
+                      {([["all","All"],["yes","Checked in"],["no","Not checked in"]] as const).map(([val, lbl]) => (
+                        <label key={val} className="flex items-center gap-2 cursor-pointer group">
+                          <div
+                            onClick={() => setFilterCheckedIn(val)}
+                            className={`w-3.5 h-3.5 border rounded-full flex items-center justify-center transition-all cursor-pointer ${
+                              filterCheckedIn === val ? "border-white bg-white" : "border-neutral-600 group-hover:border-neutral-400"
+                            }`}
+                          >
+                            {filterCheckedIn === val && <div className="w-1.5 h-1.5 rounded-full bg-black" />}
+                          </div>
+                          <span
+                            onClick={() => setFilterCheckedIn(val)}
+                            className="text-xs text-neutral-300 tracking-[0.1em] cursor-pointer"
+                          >
+                            {lbl}
+                          </span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Age range slider */}
+                <div>
+                  <p className="text-[10px] tracking-[0.25em] uppercase text-neutral-500 mb-3">
+                    Age Range — <span className="text-white">{filterAgeMin} – {filterAgeMax}</span>
+                  </p>
+                  <div className="relative h-5 flex items-center">
+                    {/* Track */}
+                    <div className="absolute w-full h-px bg-neutral-700" />
+                    {/* Active range highlight */}
+                    <div
+                      className="absolute h-px bg-white"
+                      style={{
+                        left: `${((filterAgeMin - dataAgeMin) / Math.max(dataAgeMax - dataAgeMin, 1)) * 100}%`,
+                        right: `${100 - ((filterAgeMax - dataAgeMin) / Math.max(dataAgeMax - dataAgeMin, 1)) * 100}%`,
+                      }}
+                    />
+                    {/* Min handle */}
+                    <input
+                      type="range"
+                      min={dataAgeMin}
+                      max={dataAgeMax}
+                      value={filterAgeMin}
+                      onChange={e => {
+                        const v = Number(e.target.value)
+                        if (v <= filterAgeMax) setFilterAgeMin(v)
+                      }}
+                      className="absolute w-full appearance-none bg-transparent cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:border-0 [&::-webkit-slider-runnable-track]:bg-transparent"
+                    />
+                    {/* Max handle */}
+                    <input
+                      type="range"
+                      min={dataAgeMin}
+                      max={dataAgeMax}
+                      value={filterAgeMax}
+                      onChange={e => {
+                        const v = Number(e.target.value)
+                        if (v >= filterAgeMin) setFilterAgeMax(v)
+                      }}
+                      className="absolute w-full appearance-none bg-transparent cursor-pointer [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:border-0 [&::-webkit-slider-runnable-track]:bg-transparent"
+                    />
+                  </div>
+                  <div className="flex justify-between mt-1">
+                    <span className="text-[10px] text-neutral-600">{dataAgeMin}</span>
+                    <span className="text-[10px] text-neutral-600">{dataAgeMax}</span>
+                  </div>
+                </div>
+
+                {/* Clear button */}
+                {activeFilterCount > 0 && (
+                  <div className="flex justify-end pt-1 border-t border-neutral-800">
+                    <button
+                      onClick={resetFilters}
+                      className="text-[10px] tracking-[0.2em] uppercase text-neutral-500 hover:text-white transition-colors"
+                    >
+                      Clear all filters
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Toolbar row */}
             <div className="flex items-center gap-4">
               <button
                 onClick={() => fetchApplications(currentEvent?.id)}
@@ -540,7 +767,7 @@ export default function DashboardPage() {
             {filteredApplications.length === 0 ? (
               <div className="text-center py-12">
                 <p className="text-neutral-500 text-sm tracking-[0.15em] uppercase">
-                  {searchTerm || filterStatus !== "all" ? "No applications found" : "No applications yet"}
+                  {searchTerm || activeFilterCount > 0 ? "No applications match the current filters" : "No applications yet"}
                 </p>
               </div>
             ) : (
@@ -583,7 +810,7 @@ export default function DashboardPage() {
                         {(app.status === "approved" || app.status === "rejected") && (
                           <span title={app.email_sent_at ? `Email sent ${new Date(app.email_sent_at).toLocaleString()}` : "Email not sent yet"}>
                             {app.email_sent_at
-                              ? <CheckCheck size={13} className="text-emerald-500 shrink-0" />
+                              ? <Mail size={13} className="text-emerald-500 shrink-0" />
                               : <Mail size={13} className="text-neutral-700 shrink-0" />
                             }
                           </span>
@@ -592,16 +819,6 @@ export default function DashboardPage() {
 
                         {/* Action icons */}
                         <div className="flex items-center gap-1 ml-auto">
-                          {app.status === "approved" && !app.checked_in && (
-                            <button
-                              onClick={() => handleManualCheckIn(app.id)}
-                              disabled={checkingInId === app.id}
-                              title="Manual Check-in"
-                              className="p-1.5 text-emerald-500 hover:text-emerald-400 hover:bg-emerald-400/10 rounded transition-all duration-200 disabled:opacity-50"
-                            >
-                              <LogIn size={14} />
-                            </button>
-                          )}
                           <button
                             onClick={() => editingId === app.id ? setEditingId(null) : startEdit(app)}
                             title="Edit"
@@ -641,18 +858,29 @@ export default function DashboardPage() {
                             />
                           </div>
                           <div>
-                            <label className="text-[10px] tracking-[0.2em] uppercase text-neutral-600 mb-1 block">Status</label>
-                            <select
-                              value={editForm.status}
-                              onChange={(e) => setEditForm({ ...editForm, status: e.target.value })}
-                              className="w-full bg-neutral-900 border-b border-neutral-700 py-2 text-white text-sm focus:outline-none"
-                            >
-                              <option value="applied" className="bg-black">Applied</option>
-                              <option value="approved" className="bg-black">Approved</option>
-                              <option value="rejected" className="bg-black">Rejected</option>
-                              <option value="waitlist" className="bg-black">Waitlist</option>
-                              <option value="cancelled" className="bg-black">Cancelled</option>
-                            </select>
+                            <label className="text-[10px] tracking-[0.2em] uppercase text-neutral-600 mb-1 block">
+                              Status
+                              {app.checked_in && (
+                                <span className="ml-2 text-[9px] text-yellow-500/70 tracking-[0.15em]">locked (checked in)</span>
+                              )}
+                            </label>
+                            {app.checked_in ? (
+                              <div className="w-full border-b border-neutral-800 py-2 text-neutral-500 text-sm cursor-not-allowed">
+                                {editForm.status}
+                              </div>
+                            ) : (
+                              <select
+                                value={editForm.status}
+                                onChange={(e) => setEditForm({ ...editForm, status: e.target.value })}
+                                className="w-full bg-neutral-900 border-b border-neutral-700 py-2 text-white text-sm focus:outline-none"
+                              >
+                                <option value="applied" className="bg-black">Applied</option>
+                                <option value="approved" className="bg-black">Approved</option>
+                                <option value="rejected" className="bg-black">Rejected</option>
+                                <option value="waitlist" className="bg-black">Waitlist</option>
+                                <option value="cancelled" className="bg-black">Cancelled</option>
+                              </select>
+                            )}
                           </div>
                           <div className="flex items-end gap-2">
                             <button
@@ -676,6 +904,7 @@ export default function DashboardPage() {
                     {viewMode === "detailed" && (
                       <div className="px-4 py-4">
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-3">
+                          {/* Instagram */}
                           <div>
                             <p className="text-[10px] tracking-[0.2em] uppercase text-neutral-600 mb-1">Instagram</p>
                             {app.instagram ? (
@@ -685,16 +914,36 @@ export default function DashboardPage() {
                               </a>
                             ) : <p className="text-neutral-600 text-sm">—</p>}
                           </div>
+
+                          {/* Heard via */}
                           <div>
                             <p className="text-[10px] tracking-[0.2em] uppercase text-neutral-600 mb-1">Heard via</p>
                             <p className="text-neutral-300 text-sm capitalize">{app.heard_about_us?.replace("_"," ") || "—"}</p>
                           </div>
-                          {app.checked_in_at && (
+
+                          {/* Check-in status — always shown for approved guests */}
+                          {app.status === "approved" && (
                             <div>
-                              <p className="text-[10px] tracking-[0.2em] uppercase text-neutral-600 mb-1">Checked In</p>
-                              <p className="text-emerald-400 text-sm">{new Date(app.checked_in_at).toLocaleString()}</p>
+                              <p className="text-[10px] tracking-[0.2em] uppercase text-neutral-600 mb-1">Check-in</p>
+                              {app.checked_in ? (
+                                <p className="text-emerald-400 text-sm">{app.checked_in_at ? new Date(app.checked_in_at).toLocaleString() : "Checked in"}</p>
+                              ) : (
+                                <div className="flex items-center gap-2">
+                                  <p className="text-neutral-500 text-sm">Not yet</p>
+                                  <button
+                                    onClick={() => handleManualCheckIn(app.id)}
+                                    disabled={checkingInId === app.id}
+                                    title="Manual Check-in"
+                                    className="flex items-center gap-1 px-2 py-0.5 text-[10px] tracking-[0.1em] uppercase text-emerald-500 border border-emerald-500/30 hover:border-emerald-500 hover:bg-emerald-500/5 rounded transition-all disabled:opacity-40"
+                                  >
+                                    <LogIn size={10} /> {checkingInId === app.id ? "…" : "Check in"}
+                                  </button>
+                                </div>
+                              )}
                             </div>
                           )}
+
+                          {/* Ticket / QR */}
                           {app.qr_token && (
                             <div>
                               <p className="text-[10px] tracking-[0.2em] uppercase text-neutral-600 mb-1">Ticket</p>
@@ -705,16 +954,37 @@ export default function DashboardPage() {
                             </div>
                           )}
                         </div>
+
                         {app.intro && (
                           <p className="text-neutral-500 text-sm italic mb-3">"{app.intro}"</p>
                         )}
-                        {app.status === "applied" && (
-                          <div className="pt-3 border-t border-neutral-800/50 flex gap-2">
-                            <button onClick={() => updateStatus(app.id, "approve")} className="px-3 py-1.5 text-xs tracking-[0.15em] uppercase text-emerald-400 border border-emerald-400/30 hover:border-emerald-400 hover:bg-emerald-400/5 transition-all rounded">Approve</button>
-                            <button onClick={() => updateStatus(app.id, "waitlist")} className="px-3 py-1.5 text-xs tracking-[0.15em] uppercase text-yellow-400 border border-yellow-400/30 hover:border-yellow-400 hover:bg-yellow-400/5 transition-all rounded">Waitlist</button>
-                            <button onClick={() => updateStatus(app.id, "reject")} className="px-3 py-1.5 text-xs tracking-[0.15em] uppercase text-red-400 border border-red-400/30 hover:border-red-400 hover:bg-red-400/5 transition-all rounded">Reject</button>
-                          </div>
-                        )}
+
+                        {/* Action row */}
+                        <div className="pt-3 border-t border-neutral-800/50 flex items-center gap-3 flex-wrap">
+                          {app.status === "applied" && (
+                            <>
+                              <button onClick={() => updateStatus(app.id, "approve")} className="px-3 py-1.5 text-xs tracking-[0.15em] uppercase text-emerald-400 border border-emerald-400/30 hover:border-emerald-400 hover:bg-emerald-400/5 transition-all rounded">Approve</button>
+                              <button onClick={() => updateStatus(app.id, "waitlist")} className="px-3 py-1.5 text-xs tracking-[0.15em] uppercase text-yellow-400 border border-yellow-400/30 hover:border-yellow-400 hover:bg-yellow-400/5 transition-all rounded">Waitlist</button>
+                              <button onClick={() => updateStatus(app.id, "reject")} className="px-3 py-1.5 text-xs tracking-[0.15em] uppercase text-red-400 border border-red-400/30 hover:border-red-400 hover:bg-red-400/5 transition-all rounded">Reject</button>
+                            </>
+                          )}
+                          {app.status === "approved" && (
+                            <>
+                              <button
+                                onClick={() => handleResendEmail(app.id)}
+                                disabled={resendingEmailId === app.id}
+                                className="flex items-center gap-1.5 px-3 py-1.5 text-xs tracking-[0.15em] uppercase text-blue-400 border border-blue-400/30 hover:border-blue-400 hover:bg-blue-400/5 transition-all rounded disabled:opacity-40"
+                              >
+                                <MailCheck size={11} /> {resendingEmailId === app.id ? "Sending…" : "Resend Email"}
+                              </button>
+                              {resendResult?.id === app.id && (
+                                <span className={`text-[10px] tracking-[0.1em] ${resendResult.success ? "text-emerald-400" : "text-red-400"}`}>
+                                  {resendResult.message}
+                                </span>
+                              )}
+                            </>
+                          )}
+                        </div>
                       </div>
                     )}
 

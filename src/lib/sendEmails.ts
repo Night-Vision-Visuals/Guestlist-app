@@ -56,7 +56,7 @@ function getAppUrl(): string {
 
 function formatEventDate(dateStr: string): string {
   try {
-    return new Date(dateStr + "T12:00:00").toLocaleDateString("de-DE", {
+    return new Date(dateStr.slice(0, 10) + "T12:00:00").toLocaleDateString("de-DE", {
       weekday: "long",
       year: "numeric",
       month: "long",
@@ -261,4 +261,52 @@ export async function markBatchSent(eventId: string): Promise<void> {
     .from("events")
     .update({ batch_email_sent: true })
     .eq("id", eventId)
+}
+
+/**
+ * Force-resend an email to a single approved guest, regardless of whether
+ * an email was previously sent. Also updates email_sent_at so the guest is
+ * counted as having received their email.
+ */
+export async function resendEmailForApplication(applicationId: string): Promise<SendResult> {
+  const result: SendResult = { sent: 0, failed: 0, skipped: 0, errors: [] }
+
+  const { data: app, error: appError } = await supabase
+    .from("applications")
+    .select("id, first_name, last_name, email, status, qr_token, email_sent_at, event_id")
+    .eq("id", applicationId)
+    .single()
+
+  if (appError || !app) {
+    result.errors.push("Application not found")
+    return result
+  }
+
+  if (app.status !== "approved") {
+    result.errors.push("Only approved guests can have their email resent")
+    return result
+  }
+
+  const { data: event, error: eventError } = await supabase
+    .from("events")
+    .select("id, name, event_date")
+    .eq("id", app.event_id)
+    .single()
+
+  if (eventError || !event) {
+    result.errors.push("Event not found")
+    return result
+  }
+
+  const resend = getResend()
+
+  try {
+    await sendEmailForApplication(resend, app as ApplicationRow, event as EventRow)
+    result.sent++
+  } catch (err) {
+    result.failed++
+    result.errors.push(err instanceof Error ? err.message : String(err))
+  }
+
+  return result
 }

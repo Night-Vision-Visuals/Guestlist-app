@@ -35,7 +35,9 @@ export function useCurrentEvent() {
       // Map here so every consumer gets the correct field.
       const mapped: Event[] = (raw || []).map((e) => ({
         ...e,
-        date: e.event_date ?? e.date ?? "",
+        // Supabase may return event_date as a full ISO string like "2026-04-20T00:00:00+00:00"
+        // Slice to just "YYYY-MM-DD" so date formatting never produces "Invalid Date"
+        date: (e.event_date ?? e.date ?? "").slice(0, 10),
       }))
 
       setEvents(mapped)

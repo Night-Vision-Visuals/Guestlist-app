@@ -121,7 +121,7 @@ export default function AnalyticsPage() {
               </span>
             </h1>
             <p className="text-neutral-400 text-sm tracking-[0.2em] uppercase font-light">
-              {currentEvent?.name} - {currentEvent?.date ? new Date(currentEvent.date + "T12:00:00").toLocaleDateString() : ""}
+              {currentEvent?.name} - {currentEvent?.date ? new Date(currentEvent.date.slice(0, 10) + "T12:00:00").toLocaleDateString() : ""}
             </p>
             <div className="h-px bg-gradient-to-r from-white/40 to-transparent w-20" />
           </div>

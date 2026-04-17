@@ -592,7 +592,7 @@ export default function LoginPage() {
                       <div className="flex items-start gap-4">
                         <span className="text-xs tracking-[0.2em] uppercase text-neutral-500 w-20 flex-shrink-0 pt-0.5">Date</span>
                         <span className="text-sm text-neutral-200 font-light">
-                          {new Date(eventData.event_date + "T12:00:00").toLocaleDateString("en-GB", {
+                          {new Date(eventData.event_date.slice(0, 10) + "T12:00:00").toLocaleDateString("en-GB", {
                             weekday: "long",
                             year: "numeric",
                             month: "long",

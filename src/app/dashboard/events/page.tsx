@@ -442,7 +442,7 @@ export default function EventsPage() {
     })
   }
 
-  const isPastEvent = (eventDate: string) => new Date(eventDate) < new Date()
+  const isPastEvent = (eventDate: string) => new Date(eventDate + "T12:00:00") < new Date()
 
   if (eventsLoading) {
     return (
@@ -564,7 +564,7 @@ export default function EventsPage() {
                             <div>
                               <p className="text-xs tracking-[0.2em] uppercase text-neutral-500 mb-2">Date</p>
                               <p className="text-white font-light text-sm">
-                                {new Date(event.event_date + "T12:00:00").toLocaleDateString("de-AT", {
+                                {new Date(event.event_date.slice(0, 10) + "T12:00:00").toLocaleDateString("de-AT", {
                                   day: "2-digit",
                                   month: "long",
                                   year: "numeric",

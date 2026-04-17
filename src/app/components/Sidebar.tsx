@@ -138,7 +138,7 @@ export default function Sidebar() {
               </select>
               {currentEvent && (
                 <p className="text-[10px] tracking-[0.15em] text-neutral-600 font-light mt-1">
-                  {new Date(currentEvent.date + "T12:00:00").toLocaleDateString()}
+                  {currentEvent.date ? new Date(currentEvent.date.slice(0, 10) + "T12:00:00").toLocaleDateString() : ""}
                 </p>
               )}
             </div>
