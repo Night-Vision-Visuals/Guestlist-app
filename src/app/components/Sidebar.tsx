@@ -23,7 +23,7 @@
 "use client"
 
 import { usePathname, useRouter } from "next/navigation"
-import { BarChart3, Users, Ticket, LogOut, Menu, X, CalendarPlus, QrCode, Music2 } from "lucide-react"
+import { BarChart3, Users, Ticket, LogOut, Menu, X, CalendarPlus, QrCode, Headphones } from "lucide-react"
 import { useState } from "react"
 import { useEventContext } from "@/lib/EventContext"
 
@@ -41,10 +41,10 @@ export default function Sidebar() {
       description: "Manage event applications"
     },
     {
-      label: "Analytics",
-      href: "/dashboard/analytics",
-      icon: BarChart3,
-      description: "View event statistics"
+      label: "DJs",
+      href: "/dashboard/djs",
+      icon: Headphones,
+      description: "DJ roster & lineup"
     },
     {
       label: "Invitations",
@@ -59,16 +59,16 @@ export default function Sidebar() {
       description: "Create & manage events"
     },
     {
+      label: "Analytics",
+      href: "/dashboard/analytics",
+      icon: BarChart3,
+      description: "View event statistics"
+    },
+    {
       label: "Scanner",
       href: "/dashboard/scanner",
       icon: QrCode,
       description: "QR code door scanner"
-    },
-    {
-      label: "DJs",
-      href: "/dashboard/djs",
-      icon: Music2,
-      description: "DJ roster & lineup"
     }
   ]
 
@@ -192,7 +192,7 @@ export default function Sidebar() {
                   >
                     {item.label}
                   </span>
-                  <span className="text-[10px] text-neutral-600 font-light mt-1">
+                  <span className="text-[10px] text-neutral-600 font-light mt-1 whitespace-nowrap">
                     {item.description}
                   </span>
                 </div>

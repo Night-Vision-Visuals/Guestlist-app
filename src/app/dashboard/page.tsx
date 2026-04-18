@@ -1410,11 +1410,6 @@ export default function DashboardPage() {
                   filteredStaff.map((person) => (
                     <div key={person.id} className="border border-neutral-800 hover:border-neutral-700 transition-all duration-200">
                       <div className="px-4 py-3 flex items-center gap-3 flex-wrap">
-                        {/* Role badge */}
-                        <span className={`text-[10px] px-2 py-0.5 border rounded tracking-[0.12em] uppercase font-mono shrink-0 ${ROLE_BADGE[person.role] ?? "text-neutral-400 border-neutral-700 bg-neutral-800"}`}>
-                          {ROLE_LABEL[person.role] ?? person.role}
-                        </span>
-
                         {/* Name */}
                         <span className="text-white font-light text-sm min-w-[140px]">
                           {person.first_name} {person.last_name}
@@ -1438,6 +1433,10 @@ export default function DashboardPage() {
 
                         {/* Check-in + edit */}
                         <div className="ml-auto flex items-center gap-2">
+                          {/* Role badge */}
+                          <span className={`text-[10px] px-2 py-0.5 border rounded tracking-[0.12em] uppercase font-mono shrink-0 ${ROLE_BADGE[person.role] ?? "text-neutral-400 border-neutral-700 bg-neutral-800"}`}>
+                            {ROLE_LABEL[person.role] ?? person.role}
+                          </span>
                           {person.checked_in ? (
                             <span className="flex items-center gap-1 text-[10px] text-emerald-400 tracking-[0.1em] uppercase">
                               <CheckCheck size={12} />

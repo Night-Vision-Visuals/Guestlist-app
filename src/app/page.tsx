@@ -145,7 +145,7 @@ export default function LandingPage() {
         playsInline
         className="fixed w-full h-full overflow-hidden object-cover"
       >
-        <source src="/video/bg.mp4" type="video/mp4" />
+        <source src="/VIdeo/bg.mp4" type="video/mp4" />
       </video>
       {/* 🌑 Dark overlay for readability */}
       <div className="fixed inset-0 bg-black/88" />
