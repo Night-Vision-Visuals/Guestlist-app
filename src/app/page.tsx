@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { ArrowRight, Music, Zap, Users } from "lucide-react"
+import { ArrowRight, Volume2, TrendingUp, Users } from "lucide-react"
 import Image from "next/image"
 import { useEffect, useRef } from "react"
 
@@ -228,32 +228,32 @@ export default function LandingPage() {
           {/* Features Grid */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 w-full max-w-4xl">
             <div className="group border border-neutral-800 p-8 rounded-lg hover:border-neutral-400/50 hover:bg-neutral-400/5 transition-all duration-300 backdrop-blur-sm">
+              <Volume2 size={24} className="text-neutral-400 mb-4 group-hover:scale-110 transition-transform duration-300" />
+              <h3 className="text-lg font-light tracking-[0.15em] uppercase mb-2">
+                Sound
+              </h3>
+              <p className="text-neutral-500 text-xs font-light uppercase">
+                Timeless Techno With Raw Intensity
+              </p>
+            </div>
+
+            <div className="group border border-neutral-800 p-8 rounded-lg hover:border-neutral-400/50 hover:bg-neutral-400/5 transition-all duration-300 backdrop-blur-sm">
+              <TrendingUp size={24} className="text-neutral-400 mb-4 group-hover:scale-110 transition-transform duration-300" />
+              <h3 className="text-lg font-light tracking-[0.15em] uppercase mb-2">
+                Journey
+              </h3>
+              <p className="text-neutral-500 text-xs font-light uppercase">
+                Structured nights from tension to collapse
+              </p>
+            </div>
+
+            <div className="group border border-neutral-800 p-8 rounded-lg hover:border-neutral-400/50 hover:bg-neutral-400/5 transition-all duration-300 backdrop-blur-sm">
               <Users size={24} className="text-neutral-400 mb-4 group-hover:scale-110 transition-transform duration-300" />
               <h3 className="text-lg font-light tracking-[0.15em] uppercase mb-2">
-                Curated
+                Space
               </h3>
-              <p className="text-neutral-500 text-sm font-light">
-                Handpicked guests and exclusive invitations
-              </p>
-            </div>
-
-            <div className="group border border-neutral-800 p-8 rounded-lg hover:border-neutral-400/50 hover:bg-neutral-400/5 transition-all duration-300 backdrop-blur-sm">
-              <Zap size={24} className="text-neutral-400 mb-4 group-hover:scale-110 transition-transform duration-300" />
-              <h3 className="text-lg font-light tracking-[0.15em] uppercase mb-2">
-                Fast
-              </h3>
-              <p className="text-neutral-500 text-sm font-light">
-                Real-time application tracking and instant approvals
-              </p>
-            </div>
-
-            <div className="group border border-neutral-800 p-8 rounded-lg hover:border-neutral-400/50 hover:bg-neutral-400/5 transition-all duration-300 backdrop-blur-sm">
-              <Music size={24} className="text-neutral-400 mb-4 group-hover:scale-110 transition-transform duration-300" />
-              <h3 className="text-lg font-light tracking-[0.15em] uppercase mb-2">
-                Experience
-              </h3>
-              <p className="text-neutral-500 text-sm font-light">
-                Immersive events designed for unforgettable nights
+              <p className="text-neutral-500 text-xs font-light uppercase">
+                Safe aware environments for immersive connections
               </p>
             </div>
           </div>
