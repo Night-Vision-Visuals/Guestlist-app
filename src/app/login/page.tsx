@@ -411,7 +411,7 @@ export default function LoginPage() {
               loop
               playsInline
               className="absolute inset-0 w-full h-full object-cover"
-              src="/VIdeo/bg.mp4"
+              src="/Video/bg.mp4"
             />
             <div className="absolute inset-0 bg-black/55" />
           </>
