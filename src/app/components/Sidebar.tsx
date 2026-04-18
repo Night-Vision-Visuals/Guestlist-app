@@ -23,7 +23,7 @@
 "use client"
 
 import { usePathname, useRouter } from "next/navigation"
-import { BarChart3, Users, Ticket, LogOut, Menu, X, CalendarPlus, QrCode, Headphones } from "lucide-react"
+import { BarChart3, Users, Ticket, LogOut, Menu, X, CalendarPlus, QrCode, Headphones, ClipboardList } from "lucide-react"
 import { useState } from "react"
 import { useEventContext } from "@/lib/EventContext"
 
@@ -37,7 +37,7 @@ export default function Sidebar() {
     {
       label: "Applications",
       href: "/dashboard",
-      icon: Users,
+      icon: ClipboardList,
       description: "Manage event applications"
     },
     {
@@ -177,7 +177,7 @@ export default function Sidebar() {
 
                 <Icon
                   size={20}
-                  className={`mt-1 transition-all duration-300 ${
+                  className={`w-5 h-5 shrink-0 transition-all duration-300 ${
                     active
                       ? "text-white"
                       : "text-neutral-500 group-hover:text-white"
