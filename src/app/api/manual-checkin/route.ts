@@ -61,7 +61,7 @@ export async function POST(req: Request) {
     const checkinTime = new Date().toISOString()
     const { error: updateError } = await supabase
       .from("applications")
-      .update({ checked_in: true, checked_in_at: checkinTime })
+      .update({ checked_in: true, checked_in_at: checkinTime, paid: true })
       .eq("id", id)
 
     if (updateError) {

@@ -12,10 +12,14 @@ export interface ApprovalEmailData {
   eventDate: string
   ticketUrl: string
   qrCodeDataUrl: string // base64 data URL from qrcode library
+  entryPrice: number
 }
 
 export function renderApprovalEmail(data: ApprovalEmailData): string {
-  const { guestName, eventName, eventDate, ticketUrl, qrCodeDataUrl } = data
+  const { guestName, eventName, eventDate, ticketUrl, qrCodeDataUrl, entryPrice } = data
+  const entryFeeLabel = entryPrice === 0
+    ? "Free"
+    : `€${entryPrice % 1 === 0 ? entryPrice : entryPrice.toFixed(2)}`
 
   return `<!DOCTYPE html>
 <html lang="de">
@@ -59,9 +63,15 @@ export function renderApprovalEmail(data: ApprovalEmailData): string {
                   </td>
                 </tr>
                 <tr>
-                  <td style="padding:16px 20px;">
+                  <td style="padding:16px 20px;border-bottom:1px solid #1a1a1a;">
                     <p style="margin:0 0 4px 0;font-size:9px;letter-spacing:0.25em;text-transform:uppercase;color:#555555;">Date</p>
                     <p style="margin:0;font-size:14px;color:#ffffff;font-weight:300;">${eventDate}</p>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding:16px 20px;">
+                    <p style="margin:0 0 4px 0;font-size:9px;letter-spacing:0.25em;text-transform:uppercase;color:#555555;">Entry Fee</p>
+                    <p style="margin:0;font-size:14px;color:#ffffff;font-weight:300;">${entryFeeLabel}</p>
                   </td>
                 </tr>
               </table>

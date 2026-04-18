@@ -1097,7 +1097,7 @@ export default function DashboardPage() {
                     Refresh
                   </button>
                   <div className="flex items-center border border-neutral-800 rounded overflow-hidden">
-                    <button onClick={() => setViewMode("overview")} className={`p-2 transition-all duration-200 ${viewMode === "overview" ? "bg-neutral-800 text-white" : "text-neutral-500 hover:text-white"}`} title="Overview">
+                    <button onClick={() => { setViewMode("overview"); setExpandedGuestId(null) }} className={`p-2 transition-all duration-200 ${viewMode === "overview" ? "bg-neutral-800 text-white" : "text-neutral-500 hover:text-white"}`} title="Overview">
                       <LayoutList size={14} />
                     </button>
                     <button onClick={() => setViewMode("detailed")} className={`p-2 transition-all duration-200 ${viewMode === "detailed" ? "bg-neutral-800 text-white" : "text-neutral-500 hover:text-white"}`} title="Detailed">

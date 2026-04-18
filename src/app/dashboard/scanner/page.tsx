@@ -65,10 +65,12 @@ export default function ScannerPage() {
   const [error, setError] = useState("")
   const [pendingScan, setPendingScan] = useState<PendingScan | null>(null)
   const [isConfirming, setIsConfirming] = useState(false)
+  const [isMarkingPaid, setIsMarkingPaid] = useState(false)
 
   // Refs for deduplication — never state, avoids stale closure inside camera callback
   const processingRef = useRef(false)
   const lastScannedRef = useRef<string>("")
+  const lastTokenRef = useRef<string>("")
 
   // ── Reset scan lock ────────────────────────────────────────────────────────
   const resetScanLock = useCallback(() => {
@@ -107,6 +109,30 @@ export default function ScannerPage() {
     }
   }, [resetScanLock])
 
+  // ── Mark already-checked-in guest as paid ─────────────────────────────────
+  const markAsPaid = useCallback(async (token: string) => {
+    setIsMarkingPaid(true)
+    try {
+      const res = await fetch("/api/checkin", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token }),
+        credentials: "include",
+      })
+      if (res.ok) {
+        // Update the result in-place to reflect paid status
+        setResult(prev => prev ? {
+          ...prev,
+          guest: prev.guest ? { ...prev.guest, paid: true } : prev.guest
+        } : prev)
+      }
+    } catch {
+      // Silently fail — result card stays visible
+    } finally {
+      setIsMarkingPaid(false)
+    }
+  }, [])
+
   // ── Core scan logic: fetch guest preview, then show modal ──────────────────
   const runCheckin = useCallback(async (rawText: string) => {
     if (!rawText.trim()) return
@@ -134,6 +160,7 @@ export default function ScannerPage() {
 
       // Already checked in — skip modal, show result directly
       if (data.checked_in) {
+        lastTokenRef.current = token
         setResult({
           alreadyCheckedIn: true,
           guest: {
@@ -495,6 +522,15 @@ export default function ScannerPage() {
                       : <span className="text-xs tracking-[0.15em] uppercase text-neutral-500 border border-neutral-700 px-2 py-0.5 rounded">Unpaid</span>
                     }
                   </div>
+                  {!result.guest.paid && (
+                    <button
+                      onClick={() => markAsPaid(lastTokenRef.current)}
+                      disabled={isMarkingPaid}
+                      className="mt-2 w-full px-4 py-2 border border-emerald-400/40 text-emerald-400 hover:bg-emerald-400/10 text-xs tracking-[0.2em] uppercase rounded transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {isMarkingPaid ? "Updating..." : "Mark as Paid"}
+                    </button>
+                  )}
                 </div>
               )}
 

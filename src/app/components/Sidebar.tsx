@@ -23,7 +23,7 @@
 "use client"
 
 import { usePathname, useRouter } from "next/navigation"
-import { BarChart3, Users, Ticket, LogOut, Menu, X, CalendarPlus, QrCode } from "lucide-react"
+import { BarChart3, Users, Ticket, LogOut, Menu, X, CalendarPlus, QrCode, Music2 } from "lucide-react"
 import { useState } from "react"
 import { useEventContext } from "@/lib/EventContext"
 
@@ -63,6 +63,12 @@ export default function Sidebar() {
       href: "/dashboard/scanner",
       icon: QrCode,
       description: "QR code door scanner"
+    },
+    {
+      label: "DJs",
+      href: "/dashboard/djs",
+      icon: Music2,
+      description: "DJ roster & lineup"
     }
   ]
 

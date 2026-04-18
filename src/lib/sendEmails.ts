@@ -36,12 +36,17 @@ interface ApplicationRow {
   qr_token: string | null
   email_sent_at: string | null
   event_id: string
+  role: string | null
+  invite_type: string | null
+  invitation_code_id: string | null
 }
 
 interface EventRow {
   id: string
   name: string
   event_date: string
+  entry_fee: number | null
+  friendlist_discount: number | null
 }
 
 function getResend(): Resend {
@@ -75,6 +80,30 @@ async function generateQrDataUrl(ticketUrl: string): Promise<string> {
   })
 }
 
+async function calcEntryPrice(app: ApplicationRow, event: EventRow): Promise<number> {
+  if (event.entry_fee == null) return 0
+  // Staff roles are always free
+  if (app.role && app.role !== "guest") return 0
+
+  const entryFee = event.entry_fee
+  const friendlistDiscount = event.friendlist_discount ?? 0
+
+  // Resolve tier: invite code tier first, then invite_type, then default "guest"
+  let tier = app.invite_type ?? "guest"
+  if (app.invitation_code_id) {
+    const { data: code } = await supabase
+      .from("invite_codes")
+      .select("tier, invite_type")
+      .eq("id", app.invitation_code_id)
+      .single()
+    if (code) tier = code.tier || code.invite_type || tier
+  }
+
+  if (tier === "crew" || tier === "staff") return 0
+  if (tier === "friendlist") return Math.round(entryFee * (1 - friendlistDiscount / 100) * 100) / 100
+  return entryFee
+}
+
 async function sendEmailForApplication(
   resend: Resend,
   app: ApplicationRow,
@@ -94,6 +123,7 @@ async function sendEmailForApplication(
     }
     const ticketUrl = `${appUrl}/ticket/${app.qr_token}`
     const qrCodeDataUrl = await generateQrDataUrl(ticketUrl)
+    const entryPrice = await calcEntryPrice(app, event)
 
     html = renderApprovalEmail({
       guestName,
@@ -101,6 +131,7 @@ async function sendEmailForApplication(
       eventDate,
       ticketUrl,
       qrCodeDataUrl,
+      entryPrice,
     })
     subject = `You're on the list — ${event.name}`
   } else if (app.status === "rejected") {
@@ -144,7 +175,7 @@ export async function sendPendingEmails(eventId: string): Promise<SendResult> {
   // Fetch event details
   const { data: event, error: eventError } = await supabase
     .from("events")
-    .select("id, name, event_date")
+    .select("id, name, event_date, entry_fee, friendlist_discount")
     .eq("id", eventId)
     .single()
 
@@ -156,7 +187,7 @@ export async function sendPendingEmails(eventId: string): Promise<SendResult> {
   // Fetch all unsent approved/rejected applications for this event
   const { data: applications, error: appsError } = await supabase
     .from("applications")
-    .select("id, first_name, last_name, email, status, qr_token, email_sent_at, event_id")
+    .select("id, first_name, last_name, email, status, qr_token, email_sent_at, event_id, role, invite_type, invitation_code_id")
     .eq("event_id", eventId)
     .in("status", ["approved", "rejected"])
     .is("email_sent_at", null)
@@ -196,7 +227,7 @@ export async function sendSingleEmail(applicationId: string): Promise<SendResult
 
   const { data: app, error: appError } = await supabase
     .from("applications")
-    .select("id, first_name, last_name, email, status, qr_token, email_sent_at, event_id")
+    .select("id, first_name, last_name, email, status, qr_token, email_sent_at, event_id, role, invite_type, invitation_code_id")
     .eq("id", applicationId)
     .single()
 
@@ -217,7 +248,7 @@ export async function sendSingleEmail(applicationId: string): Promise<SendResult
 
   const { data: event, error: eventError } = await supabase
     .from("events")
-    .select("id, name, event_date")
+    .select("id, name, event_date, entry_fee, friendlist_discount")
     .eq("id", app.event_id)
     .single()
 
@@ -273,7 +304,7 @@ export async function resendEmailForApplication(applicationId: string): Promise<
 
   const { data: app, error: appError } = await supabase
     .from("applications")
-    .select("id, first_name, last_name, email, status, qr_token, email_sent_at, event_id")
+    .select("id, first_name, last_name, email, status, qr_token, email_sent_at, event_id, role, invite_type, invitation_code_id")
     .eq("id", applicationId)
     .single()
 
@@ -289,7 +320,7 @@ export async function resendEmailForApplication(applicationId: string): Promise<
 
   const { data: event, error: eventError } = await supabase
     .from("events")
-    .select("id, name, event_date")
+    .select("id, name, event_date, entry_fee, friendlist_discount")
     .eq("id", app.event_id)
     .single()
 

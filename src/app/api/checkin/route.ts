@@ -176,3 +176,53 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })
   }
 }
+
+// PATCH endpoint to mark an already-checked-in guest as paid
+export async function PATCH(req: Request) {
+  try {
+    const admin = await verifyAdminSession()
+    if (!admin) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
+    const { token } = await req.json()
+    if (!token) {
+      return NextResponse.json({ error: "No token provided" }, { status: 400 })
+    }
+
+    const { data: application, error: fetchError } = await supabase
+      .from("applications")
+      .select("id, first_name, last_name, checked_in")
+      .eq("qr_token", token)
+      .single()
+
+    if (fetchError || !application) {
+      return NextResponse.json({ error: "Invalid or unknown QR code" }, { status: 404 })
+    }
+
+    if (!application.checked_in) {
+      return NextResponse.json({ error: "Guest is not checked in yet" }, { status: 400 })
+    }
+
+    const { error: updateError } = await supabase
+      .from("applications")
+      .update({ paid: true })
+      .eq("id", application.id)
+
+    if (updateError) {
+      return NextResponse.json({ error: "Failed to update payment status" }, { status: 500 })
+    }
+
+    return NextResponse.json({
+      success: true,
+      guest: {
+        id: application.id,
+        name: `${application.first_name} ${application.last_name}`,
+        paid: true,
+      }
+    })
+  } catch (error) {
+    console.error("Mark paid error:", error)
+    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+  }
+}
