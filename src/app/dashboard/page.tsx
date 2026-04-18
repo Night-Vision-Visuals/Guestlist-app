@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import { useEventContext } from "@/lib/EventContext"
-import { QrCode, Pencil, X, Check, LogIn, UserX, LayoutList, LayoutGrid, Mail, Send, Clock, CheckCheck, MailCheck, SlidersHorizontal, UserPlus, Download } from "lucide-react"
+import { QrCode, Pencil, X, Check, LogIn, UserX, LayoutList, LayoutGrid, Mail, Send, Clock, CheckCheck, MailCheck, SlidersHorizontal, UserPlus, Download, Receipt } from "lucide-react"
 import * as XLSX from "xlsx"
 
 interface AdminRef {
@@ -28,6 +28,7 @@ interface Application {
   qr_token: string | null
   checked_in: boolean | null
   checked_in_at: string | null
+  paid: boolean | null
   invite_type: string | null
   age_flagged: boolean | null
   email_sent_at: string | null
@@ -1274,7 +1275,13 @@ export default function DashboardPage() {
                                 <div>
                                   <p className="text-[10px] tracking-[0.2em] uppercase text-neutral-600 mb-1">Check-in</p>
                                   {app.checked_in ? (
-                                    <p className="text-emerald-400 text-sm">{app.checked_in_at ? new Date(app.checked_in_at).toLocaleString() : "Checked in"}</p>
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                      <p className="text-emerald-400 text-sm">{app.checked_in_at ? new Date(app.checked_in_at).toLocaleString() : "Checked in"}</p>
+                                      {app.paid
+                                        ? <span title="Payment confirmed" className="flex items-center gap-1 text-[10px] tracking-[0.15em] uppercase text-emerald-400 border border-emerald-400/30 bg-emerald-400/5 px-2 py-0.5 rounded"><Receipt size={10} /> Paid</span>
+                                        : <span title="Payment not recorded" className="flex items-center gap-1 text-[10px] tracking-[0.15em] uppercase text-red-400/70 border border-red-400/20 bg-red-400/5 px-2 py-0.5 rounded"><Receipt size={10} /> Unpaid</span>
+                                      }
+                                    </div>
                                   ) : (
                                     <div className="flex items-center gap-2">
                                       <p className="text-neutral-500 text-sm">Not yet</p>

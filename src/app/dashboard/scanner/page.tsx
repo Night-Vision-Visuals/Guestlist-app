@@ -4,6 +4,21 @@ import { useEffect, useRef, useState, useCallback } from "react"
 import { BrowserQRCodeReader, IScannerControls } from "@zxing/browser"
 import { DecodeHintType, BarcodeFormat } from "@zxing/library"
 
+interface GuestPreview {
+  id: string
+  name: string
+  email: string
+  entryPrice: number
+  paid: boolean
+  checked_in: boolean
+  checked_in_at?: string | null
+}
+
+interface PendingScan {
+  token: string
+  guest: GuestPreview
+}
+
 interface CheckInResult {
   success?: boolean
   error?: string
@@ -13,6 +28,7 @@ interface CheckInResult {
     name: string
     email: string
     checked_in_at?: string
+    paid?: boolean
   }
 }
 
@@ -47,12 +63,51 @@ export default function ScannerPage() {
   const [result, setResult] = useState<CheckInResult | null>(null)
   const [isProcessing, setIsProcessing] = useState(false)
   const [error, setError] = useState("")
+  const [pendingScan, setPendingScan] = useState<PendingScan | null>(null)
+  const [isConfirming, setIsConfirming] = useState(false)
 
   // Refs for deduplication — never state, avoids stale closure inside camera callback
   const processingRef = useRef(false)
   const lastScannedRef = useRef<string>("")
 
-  // ── Core check-in logic ────────────────────────────────────────────────────
+  // ── Reset scan lock ────────────────────────────────────────────────────────
+  const resetScanLock = useCallback(() => {
+    lastScannedRef.current = ""
+    processingRef.current = false
+  }, [])
+
+  // ── Complete check-in (called after payment confirmation) ──────────────────
+  const completeCheckin = useCallback(async (token: string, paid: boolean) => {
+    setIsConfirming(true)
+    setPendingScan(null)
+
+    try {
+      const res = await fetch("/api/checkin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token, paid }),
+        credentials: "include",
+      })
+
+      const data: CheckInResult = await res.json()
+      setResult(data)
+
+      setTimeout(() => {
+        setResult(null)
+        resetScanLock()
+      }, 5000)
+    } catch {
+      setResult({ error: "Network error. Please try again." })
+      setTimeout(() => {
+        setResult(null)
+        resetScanLock()
+      }, 3000)
+    } finally {
+      setIsConfirming(false)
+    }
+  }, [resetScanLock])
+
+  // ── Core scan logic: fetch guest preview, then show modal ──────────────────
   const runCheckin = useCallback(async (rawText: string) => {
     if (!rawText.trim()) return
 
@@ -65,32 +120,55 @@ export default function ScannerPage() {
     setResult(null)
 
     try {
-      const res = await fetch("/api/checkin", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token }),
+      const res = await fetch(`/api/checkin?token=${encodeURIComponent(token)}`, {
         credentials: "include",
       })
+      const data = await res.json()
 
-      const data: CheckInResult = await res.json()
-      setResult(data)
+      if (!res.ok) {
+        setResult({ error: data.error || "Unknown error" })
+        setTimeout(() => { setResult(null); resetScanLock() }, 3000)
+        setIsProcessing(false)
+        return
+      }
 
-      setTimeout(() => {
-        setResult(null)
-        lastScannedRef.current = ""
-        processingRef.current = false
-      }, 5000)
+      // Already checked in — skip modal, show result directly
+      if (data.checked_in) {
+        setResult({
+          alreadyCheckedIn: true,
+          guest: {
+            id: data.id,
+            name: data.name,
+            email: data.email,
+            checked_in_at: data.checked_in_at,
+            paid: data.paid,
+          }
+        })
+        setTimeout(() => { setResult(null); resetScanLock() }, 5000)
+        setIsProcessing(false)
+        return
+      }
+
+      // Show payment confirmation modal
+      setPendingScan({
+        token,
+        guest: {
+          id: data.id,
+          name: data.name,
+          email: data.email,
+          entryPrice: data.entryPrice ?? 0,
+          paid: data.paid ?? false,
+          checked_in: data.checked_in ?? false,
+          checked_in_at: data.checked_in_at,
+        }
+      })
     } catch {
       setResult({ error: "Network error. Please try again." })
-      setTimeout(() => {
-        setResult(null)
-        lastScannedRef.current = ""
-        processingRef.current = false
-      }, 3000)
+      setTimeout(() => { setResult(null); resetScanLock() }, 3000)
     } finally {
       setIsProcessing(false)
     }
-  }, [])
+  }, [resetScanLock])
 
   // ── Camera QR callback ─────────────────────────────────────────────────────
   const processQrCode = useCallback(
@@ -105,9 +183,6 @@ export default function ScannerPage() {
   )
 
   // ── Inverted-frame reader loop ─────────────────────────────────────────────
-  // @zxing/library in this version has no ALSO_INVERTED hint, so we manually
-  // draw each video frame onto a hidden canvas, invert its pixels, then run a
-  // second BrowserQRCodeReader decode attempt on that canvas image.
   const startInvertLoop = useCallback(
     (invertReader: BrowserQRCodeReader) => {
       const video = videoRef.current
@@ -124,21 +199,17 @@ export default function ScannerPage() {
           canvas.width = w
           canvas.height = h
 
-          // Draw current frame
           ctx.drawImage(video, 0, 0, w, h)
 
-          // Invert pixels
           const imageData = ctx.getImageData(0, 0, w, h)
           const data = imageData.data
           for (let i = 0; i < data.length; i += 4) {
-            data[i] = 255 - data[i]         // R
-            data[i + 1] = 255 - data[i + 1] // G
-            data[i + 2] = 255 - data[i + 2] // B
-            // alpha unchanged
+            data[i] = 255 - data[i]
+            data[i + 1] = 255 - data[i + 1]
+            data[i + 2] = 255 - data[i + 2]
           }
           ctx.putImageData(imageData, 0, 0)
 
-          // Try to decode the inverted frame
           try {
             const result = await invertReader.decodeFromCanvas(canvas)
             if (result) processQrCode(result.getText())
@@ -161,14 +232,12 @@ export default function ScannerPage() {
     setError("")
 
     try {
-      // Primary reader: normal (black on white) QR codes with TRY_HARDER
       const hints = new Map()
       hints.set(DecodeHintType.POSSIBLE_FORMATS, [BarcodeFormat.QR_CODE])
       hints.set(DecodeHintType.TRY_HARDER, true)
 
       const codeReader = new BrowserQRCodeReader(hints)
 
-      // Secondary reader: used only for the inverted-pixel canvas frames
       const invertHints = new Map()
       invertHints.set(DecodeHintType.POSSIBLE_FORMATS, [BarcodeFormat.QR_CODE])
       invertHints.set(DecodeHintType.TRY_HARDER, true)
@@ -199,8 +268,6 @@ export default function ScannerPage() {
 
       controlsRef.current = controls
       setScanning(true)
-
-      // Start the parallel inverted-frame loop
       startInvertLoop(invertReader)
     } catch (err) {
       console.error("Scanner start error:", err)
@@ -232,6 +299,7 @@ export default function ScannerPage() {
     }
     setScanning(false)
     setResult(null)
+    setPendingScan(null)
     lastScannedRef.current = ""
     processingRef.current = false
   }, [])
@@ -245,6 +313,61 @@ export default function ScannerPage() {
     <div className="min-h-screen bg-black text-white">
       {/* Hidden canvas used for inverted-frame decoding */}
       <canvas ref={canvasRef} className="hidden" aria-hidden="true" />
+
+      {/* Payment confirmation modal */}
+      {pendingScan && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm px-6">
+          <div className="w-full max-w-sm border border-neutral-700 bg-neutral-950 rounded-2xl overflow-hidden shadow-2xl">
+            {/* Modal header */}
+            <div className="px-8 pt-8 pb-6 border-b border-neutral-800 text-center space-y-1">
+              <p className="text-xs tracking-[0.3em] uppercase text-neutral-500 mb-3">Payment Required</p>
+              <p className="text-2xl font-light text-white">{pendingScan.guest.name}</p>
+              <p className="text-sm text-neutral-400">{pendingScan.guest.email}</p>
+            </div>
+
+            {/* Entry fee */}
+            <div className="flex items-center justify-center py-8">
+              <div className="text-center space-y-1">
+                <p className="text-xs tracking-[0.3em] uppercase text-neutral-600">Entry Fee</p>
+                <p className="text-5xl font-light tracking-tight">
+                  <span className="bg-gradient-to-b from-white via-white to-neutral-500 bg-clip-text text-transparent">
+                    {pendingScan.guest.entryPrice === 0
+                      ? "Free"
+                      : `€${pendingScan.guest.entryPrice % 1 === 0
+                          ? pendingScan.guest.entryPrice
+                          : pendingScan.guest.entryPrice.toFixed(2)}`}
+                  </span>
+                </p>
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="px-8 pb-8 space-y-3">
+              <button
+                onClick={() => completeCheckin(pendingScan.token, true)}
+                disabled={isConfirming}
+                className="w-full px-6 py-4 border border-emerald-400/50 text-emerald-400 hover:bg-emerald-400/10 text-sm tracking-[0.2em] uppercase rounded-lg transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isConfirming ? "Checking in..." : "Confirm Payment & Check In"}
+              </button>
+              <button
+                onClick={() => completeCheckin(pendingScan.token, false)}
+                disabled={isConfirming}
+                className="w-full px-6 py-4 border border-neutral-700 text-neutral-400 hover:border-neutral-500 hover:text-neutral-300 text-sm tracking-[0.2em] uppercase rounded-lg transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Check In Without Payment
+              </button>
+              <button
+                onClick={() => { setPendingScan(null); resetScanLock() }}
+                disabled={isConfirming}
+                className="w-full px-6 py-3 text-neutral-600 hover:text-neutral-400 text-xs tracking-[0.2em] uppercase transition-colors duration-200 disabled:opacity-50"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Background */}
       <div className="fixed inset-0 z-0">
@@ -299,7 +422,7 @@ export default function ScannerPage() {
               />
 
               {/* Scanning overlay */}
-              {scanning && !isProcessing && !result && (
+              {scanning && !isProcessing && !result && !pendingScan && (
                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                   <div className="w-48 h-48 relative">
                     <div className="absolute inset-0 border-2 border-white/40 rounded-lg" />
@@ -346,7 +469,13 @@ export default function ScannerPage() {
                   <p className="text-emerald-400 text-sm tracking-[0.2em] uppercase font-light">Check-in Successful</p>
                   <p className="text-white text-xl font-light">{result.guest.name}</p>
                   <p className="text-neutral-400 text-sm">{result.guest.email}</p>
-                  <p className="text-neutral-600 text-xs tracking-[0.1em] uppercase">{new Date().toLocaleTimeString()}</p>
+                  <div className="flex items-center gap-3 pt-1">
+                    <p className="text-neutral-600 text-xs tracking-[0.1em] uppercase">{new Date().toLocaleTimeString()}</p>
+                    {result.guest.paid
+                      ? <span className="text-xs tracking-[0.15em] uppercase text-emerald-400 border border-emerald-400/30 bg-emerald-400/5 px-2 py-0.5 rounded">Paid</span>
+                      : <span className="text-xs tracking-[0.15em] uppercase text-neutral-500 border border-neutral-700 px-2 py-0.5 rounded">Unpaid</span>
+                    }
+                  </div>
                 </div>
               )}
 
@@ -355,11 +484,17 @@ export default function ScannerPage() {
                   <p className="text-yellow-400 text-sm tracking-[0.2em] uppercase font-light">Already Checked In</p>
                   <p className="text-white text-xl font-light">{result.guest.name}</p>
                   <p className="text-neutral-400 text-sm">{result.guest.email}</p>
-                  {result.guest.checked_in_at && (
-                    <p className="text-neutral-600 text-xs tracking-[0.1em]">
-                      Checked in at: {new Date(result.guest.checked_in_at).toLocaleString()}
-                    </p>
-                  )}
+                  <div className="flex items-center gap-3 pt-1">
+                    {result.guest.checked_in_at && (
+                      <p className="text-neutral-600 text-xs tracking-[0.1em]">
+                        {new Date(result.guest.checked_in_at).toLocaleString()}
+                      </p>
+                    )}
+                    {result.guest.paid
+                      ? <span className="text-xs tracking-[0.15em] uppercase text-emerald-400 border border-emerald-400/30 bg-emerald-400/5 px-2 py-0.5 rounded">Paid</span>
+                      : <span className="text-xs tracking-[0.15em] uppercase text-neutral-500 border border-neutral-700 px-2 py-0.5 rounded">Unpaid</span>
+                    }
+                  </div>
                 </div>
               )}
 
@@ -397,7 +532,7 @@ export default function ScannerPage() {
             <ul className="text-sm text-neutral-500 space-y-1 font-light">
               <li>1. Click &quot;Start Scanner&quot; and allow camera access</li>
               <li>2. Point camera at guest&apos;s QR code ticket</li>
-              <li>3. The guest will be automatically checked in</li>
+              <li>3. Confirm payment in the popup, then check in</li>
               <li>4. Green = success, Yellow = already checked in, Red = invalid</li>
             </ul>
           </div>

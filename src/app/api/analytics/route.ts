@@ -160,6 +160,7 @@ export async function GET(req: Request) {
 
     const approvedList   = apps.filter((a: any) => a.status === "approved")
     const checkedInList  = apps.filter((a: any) => a.checked_in)
+    const paidList       = apps.filter((a: any) => a.paid === true)
 
     // Per-tier counts & revenue — staff are tracked separately, not in revenue
     const tierRevenue = (list: any[]) => {
@@ -192,15 +193,18 @@ export async function GET(req: Request) {
 
     const approvedRevenue  = tierRevenue(approvedList)
     const checkedInRevenue = tierRevenue(checkedInList)
+    const paidRevenue      = tierRevenue(paidList)
 
     const incomeStats = {
       entryFee,
       friendlistDiscount,
       projectedApproved:   Math.round(approvedRevenue.total * 100) / 100,
       projectedCheckedIn:  Math.round(checkedInRevenue.total * 100) / 100,
+      projectedPaid:       Math.round(paidRevenue.total * 100) / 100,
       breakdown: {
         approved:  approvedRevenue,
         checkedIn: checkedInRevenue,
+        paid:      paidRevenue,
       }
     }
 

@@ -74,9 +74,11 @@ interface IncomeStats {
   friendlistDiscount: number | null
   projectedApproved: number
   projectedCheckedIn: number
+  projectedPaid: number
   breakdown: {
     approved: TierRevenue
     checkedIn: TierRevenue
+    paid: TierRevenue
   }
 }
 
@@ -314,8 +316,8 @@ export default function AnalyticsPage() {
                         </p>
                       </div>
                       <div className="border border-neutral-800 p-6 rounded">
-                        <p className="text-xs tracking-[0.2em] uppercase text-neutral-500 mb-3">Actual (Checked In)</p>
-                        <p className="text-4xl font-light text-emerald-400">€{fmt(analytics.incomeStats.projectedCheckedIn)}</p>
+                        <p className="text-xs tracking-[0.2em] uppercase text-neutral-500 mb-3">Actually Paid</p>
+                        <p className="text-4xl font-light text-emerald-400">€{fmt(analytics.incomeStats.projectedPaid)}</p>
                         <p className="text-xs text-neutral-600 mt-1">
                           {analytics.statistics.checkedIn} guests checked in
                         </p>
@@ -336,35 +338,35 @@ export default function AnalyticsPage() {
                           <table className="w-full text-sm">
                             <thead>
                               <tr className="border-b border-neutral-800">
-                                {["Tier", "Approved", "Revenue (proj.)", "Checked In", "Revenue (actual)"].map(h => (
+                                {["Tier", "Approved", "Revenue (proj.)", "Paid", "Revenue (paid)"].map(h => (
                                   <th key={h} className="text-left text-[10px] tracking-[0.2em] uppercase text-neutral-600 pb-3 pr-6 last:pr-0">{h}</th>
                                 ))}
                               </tr>
                             </thead>
                             <tbody>
-                              {[
-                                {
-                                  label: "Guest",
-                                  approvedCount: analytics.incomeStats.breakdown.approved.guestCount,
-                                  approvedRev:   analytics.incomeStats.breakdown.approved.guestRev,
-                                  ciCount:       analytics.incomeStats.breakdown.checkedIn.guestCount,
-                                  ciRev:         analytics.incomeStats.breakdown.checkedIn.guestRev,
-                                },
-                                {
-                                  label: "Friendlist",
-                                  approvedCount: analytics.incomeStats.breakdown.approved.friendlistCount,
-                                  approvedRev:   analytics.incomeStats.breakdown.approved.friendlistRev,
-                                  ciCount:       analytics.incomeStats.breakdown.checkedIn.friendlistCount,
-                                  ciRev:         analytics.incomeStats.breakdown.checkedIn.friendlistRev,
-                                },
-                                 {
-                                   label: "Staff",
-                                   approvedCount: analytics.incomeStats.breakdown.approved.staffCount + analytics.incomeStats.breakdown.approved.crewCount,
-                                   approvedRev:   0,
-                                   ciCount:       analytics.incomeStats.breakdown.checkedIn.staffCount + analytics.incomeStats.breakdown.checkedIn.crewCount,
-                                   ciRev:         0,
-                                 },
-                              ].map(row => (
+                                {[
+                                  {
+                                    label: "Guest",
+                                    approvedCount: analytics.incomeStats.breakdown.approved.guestCount,
+                                    approvedRev:   analytics.incomeStats.breakdown.approved.guestRev,
+                                    ciCount:       analytics.incomeStats.breakdown.paid.guestCount,
+                                    ciRev:         analytics.incomeStats.breakdown.paid.guestRev,
+                                  },
+                                  {
+                                    label: "Friendlist",
+                                    approvedCount: analytics.incomeStats.breakdown.approved.friendlistCount,
+                                    approvedRev:   analytics.incomeStats.breakdown.approved.friendlistRev,
+                                    ciCount:       analytics.incomeStats.breakdown.paid.friendlistCount,
+                                    ciRev:         analytics.incomeStats.breakdown.paid.friendlistRev,
+                                  },
+                                   {
+                                     label: "Staff",
+                                     approvedCount: analytics.incomeStats.breakdown.approved.staffCount + analytics.incomeStats.breakdown.approved.crewCount,
+                                     approvedRev:   0,
+                                     ciCount:       analytics.incomeStats.breakdown.paid.staffCount + analytics.incomeStats.breakdown.paid.crewCount,
+                                     ciRev:         0,
+                                   },
+                                ].map(row => (
                                 <tr key={row.label} className="border-b border-neutral-900">
                                   <td className="py-3 pr-6 text-neutral-300 font-light">{row.label}</td>
                                   <td className="py-3 pr-6 text-neutral-400">{row.approvedCount}</td>

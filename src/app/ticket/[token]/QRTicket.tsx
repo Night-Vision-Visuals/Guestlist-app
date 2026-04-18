@@ -18,13 +18,13 @@ interface Application {
 interface QRTicketProps {
   application: Application
   token: string
+  entryPrice: number
 }
 
-export default function QRTicket({ application, token }: QRTicketProps) {
+export default function QRTicket({ application, token, entryPrice }: QRTicketProps) {
   const [qrDataUrl, setQrDataUrl] = useState<string>("")
 
   useEffect(() => {
-    // Generate QR code as data URL
     const ticketUrl = `${window.location.origin}/ticket/${token}`
     QRCode.toDataURL(ticketUrl, {
       width: 280,
@@ -35,6 +35,10 @@ export default function QRTicket({ application, token }: QRTicketProps) {
       }
     }).then(setQrDataUrl).catch(console.error)
   }, [token])
+
+  const priceLabel = entryPrice === 0
+    ? "Free Entry"
+    : `€${entryPrice % 1 === 0 ? entryPrice : entryPrice.toFixed(2)}`
 
   return (
     <div className="min-h-screen bg-black text-white overflow-hidden">
@@ -87,7 +91,7 @@ export default function QRTicket({ application, token }: QRTicketProps) {
           </div>
 
           {/* Status Bar */}
-          <div className="px-8 pb-8 text-center space-y-3">
+          <div className="px-8 pb-6 text-center space-y-3">
             {application.checked_in ? (
               <div className="py-2 px-4 border border-yellow-400/30 bg-yellow-400/5 rounded">
                 <p className="text-yellow-400 text-xs tracking-[0.2em] uppercase">
@@ -106,7 +110,13 @@ export default function QRTicket({ application, token }: QRTicketProps) {
                 </p>
               </div>
             )}
-            <p className="text-[10px] tracking-[0.15em] text-neutral-700 uppercase">
+          </div>
+
+          {/* Entry Fee */}
+          <div className="px-8 pb-8 text-center border-t border-neutral-800 pt-5 space-y-1">
+            <p className="text-[10px] tracking-[0.3em] uppercase text-neutral-600">Entry Fee</p>
+            <p className="text-xl font-light text-white">{priceLabel}</p>
+            <p className="text-[10px] tracking-[0.15em] text-neutral-700 uppercase mt-2">
               Present this QR code at the entrance
             </p>
           </div>
