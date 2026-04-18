@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react"
 import Link from "next/link"
+import ReactMarkdown from "react-markdown"
 
 // ─── BirthDatePicker ──────────────────────────────────────────────────────────
 // Defined OUTSIDE page component to prevent remount on every render.
@@ -401,7 +402,21 @@ export default function LoginPage() {
     <div className="min-h-screen bg-black text-white overflow-hidden">
       {/* Background */}
       <div className="fixed inset-0 z-0">
-        <div className="absolute inset-0 bg-gradient-to-br from-neutral-900 via-black to-black" />
+        {/* Video — only visible on code step */}
+        {step === "code" && (
+          <>
+            <video
+              autoPlay
+              muted
+              loop
+              playsInline
+              className="absolute inset-0 w-full h-full object-cover"
+              src="/VIdeo/bg.mp4"
+            />
+            <div className="absolute inset-0 bg-black/55" />
+          </>
+        )}
+        <div className={`absolute inset-0 bg-gradient-to-br ${step === "code" ? "from-neutral-900/40 via-black/30 to-black/50" : "from-neutral-900 via-black to-black"}`} />
         <div className="absolute top-0 left-1/4 w-96 h-96 bg-white/10 rounded-full blur-3xl opacity-20 animate-pulse" />
         <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-white/5 rounded-full blur-3xl opacity-20 animate-pulse" />
       </div>
@@ -454,7 +469,7 @@ export default function LoginPage() {
 
         {/* Main Content */}
         <div className="flex items-center justify-center flex-1 py-12">
-          <div className="w-full max-w-md">
+          <div className={step === "code" ? "w-full flex items-center justify-center" : "w-full max-w-md"}>
 
             {/* ── STEP: DONE ── */}
             {step === "done" && (
@@ -500,66 +515,68 @@ export default function LoginPage() {
 
             {/* ── STEP: CODE ── */}
             {step === "code" && (
-              <>
-                <div className="mb-16 space-y-4">
-                  <h1 className="text-8xl md:text-9xl font-light tracking-tight leading-none mb-6">
+              <div className="w-full max-w-md mx-auto bg-neutral-900/50 backdrop-blur-md border border-neutral-800/60 rounded-lg px-12 py-14 flex flex-col items-center text-center space-y-8">
+
+                {/* Headline */}
+                <div className="space-y-3">
+                  <h1 className="text-[10rem] font-light tracking-[0.15em] leading-none">
                     <span className="bg-gradient-to-b from-white via-white to-neutral-500 bg-clip-text text-transparent">
                       ACCESS
                     </span>
                   </h1>
-                  <p className="text-neutral-400 text-sm tracking-[0.2em] uppercase font-light">
-                    Invitation only experience
+                  <p className="text-neutral-400 text-sm tracking-[0.25em] uppercase font-light">
+                    See what others can&apos;t
                   </p>
-                  <div className="h-px bg-gradient-to-r from-white/40 to-transparent w-20" />
+                  <div className="h-px bg-gradient-to-r from-transparent via-white/40 to-transparent w-24 mx-auto" />
                 </div>
 
-                <form onSubmit={(e) => e.preventDefault()} className="space-y-8">
-                  <div className="space-y-3">
-                    <label className="text-xs tracking-[0.2em] uppercase text-neutral-500 transition-colors duration-300">
-                      Security Code
-                    </label>
-                    <div className="flex gap-3 justify-center md:justify-start">
-                      {code.map((digit, index) => (
-                        <input
-                          key={index}
-                          ref={(el) => { inputRefs.current[index] = el }}
-                          type="text"
-                          inputMode="text"
-                          maxLength={1}
-                          value={digit}
-                          onChange={(e) => handleCodeChange(index, e.target.value)}
-                          onKeyDown={(e) => handleKeyDown(index, e)}
-                          onPaste={handlePaste}
-                          disabled={isLoading}
-                          className={`w-14 h-16 bg-transparent text-white text-center text-2xl font-light border-b-2 focus:outline-none transition-all duration-500 ${
-                            digit
-                              ? "border-white shadow-[0_1px_0_0_rgba(255,255,255,0.3)]"
-                              : "border-neutral-800 hover:border-neutral-700"
-                          } ${isLoading ? "opacity-50 cursor-not-allowed" : ""}`}
-                        />
-                      ))}
-                    </div>
+                {/* Input */}
+                <div className="w-full space-y-4">
+                  <label className="block text-sm tracking-[0.25em] uppercase text-neutral-400">
+                    Access Key
+                  </label>
+                  <div className="flex gap-2.5 justify-center">
+                    {code.map((digit, index) => (
+                      <input
+                        key={index}
+                        ref={(el) => { inputRefs.current[index] = el }}
+                        type="text"
+                        inputMode="text"
+                        maxLength={1}
+                        value={digit}
+                        onChange={(e) => handleCodeChange(index, e.target.value)}
+                        onKeyDown={(e) => handleKeyDown(index, e)}
+                        onPaste={handlePaste}
+                        disabled={isLoading}
+                        className={`w-14 h-14 text-white text-center text-xl font-light rounded border focus:outline-none transition-all duration-500 backdrop-blur-sm ${
+                          digit
+                            ? "bg-white/15 border-white/50 shadow-[0_0_20px_rgba(255,255,255,0.05)]"
+                            : "bg-white/8 border-white/20 hover:bg-white/12 hover:border-white/30"
+                        } ${isLoading ? "opacity-50 cursor-not-allowed" : ""}`}
+                      />
+                    ))}
                   </div>
-
-                  {message && (
-                    <div className="text-sm tracking-[0.15em] py-3 transition-all duration-300 text-center text-red-400">
-                      {message}
-                    </div>
-                  )}
-
-                  {isLoading && (
-                    <div className="text-center">
-                      <p className="text-xs tracking-[0.3em] uppercase text-neutral-400">Verifying...</p>
-                    </div>
-                  )}
-                </form>
-
-                <div className="my-12 h-px bg-gradient-to-r from-neutral-800 via-neutral-800 to-transparent" />
-                <div className="flex justify-between text-xs text-neutral-600 tracking-[0.15em] uppercase">
-                  <button className="hover:text-white transition-colors duration-300">Resend Code</button>
-                  <button className="hover:text-white transition-colors duration-300">Request Access</button>
                 </div>
-              </>
+
+                {/* States */}
+                {message && (
+                  <p className="text-sm tracking-[0.15em] text-red-400">{message}</p>
+                )}
+                {isLoading && (
+                  <p className="text-xs tracking-[0.3em] uppercase text-neutral-400">Verifying...</p>
+                )}
+
+                {/* Request Key */}
+                <a
+                  href="https://ig.me/m/nightvision_raw"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-xs tracking-[0.2em] uppercase text-neutral-600 hover:text-white transition-colors duration-300"
+                >
+                  Request Key
+                </a>
+
+              </div>
             )}
 
             {/* ── STEP: EVENT INFO ── */}
@@ -618,18 +635,44 @@ export default function LoginPage() {
                         </span>
                       </div>
                     )}
-                    {eventData?.guest_limit && (
-                      <div className="flex items-start gap-4">
-                        <span className="text-xs tracking-[0.2em] uppercase text-neutral-500 w-20 flex-shrink-0 pt-0.5">Capacity</span>
-                        <span className="text-sm text-neutral-200 font-light">{eventData.guest_limit} guests</span>
-                      </div>
-                    )}
                   </div>
 
                   {/* Description */}
                   {eventData?.description && (
-                    <div className="border-l border-neutral-700 pl-5">
-                      <p className="text-sm text-neutral-400 font-light leading-relaxed">{eventData.description}</p>
+                    <div className="border border-neutral-800 bg-neutral-950/40 backdrop-blur-sm rounded-xl p-6 space-y-4">
+                      <ReactMarkdown
+                        components={{
+                          p: ({ children }) => (
+                            <p className="text-sm text-neutral-300 font-light leading-relaxed">{children}</p>
+                          ),
+                          h1: ({ children }) => (
+                            <h2 className="text-base text-white font-light tracking-[0.1em] uppercase mb-2">{children}</h2>
+                          ),
+                          h2: ({ children }) => (
+                            <h3 className="text-sm text-white font-light tracking-[0.15em] uppercase mb-1">{children}</h3>
+                          ),
+                          ul: ({ children }) => (
+                            <ul className="space-y-1.5 pl-1">{children}</ul>
+                          ),
+                          li: ({ children }) => (
+                            <li className="flex items-start gap-2 text-sm text-neutral-400 font-light leading-relaxed">
+                              <span className="text-neutral-600 mt-1.5 flex-shrink-0">·</span>
+                              <span>{children}</span>
+                            </li>
+                          ),
+                          strong: ({ children }) => (
+                            <strong className="text-white font-normal">{children}</strong>
+                          ),
+                          em: ({ children }) => (
+                            <em className="text-neutral-300 not-italic">{children}</em>
+                          ),
+                          hr: () => (
+                            <div className="h-px bg-gradient-to-r from-neutral-800 via-neutral-700 to-transparent my-2" />
+                          ),
+                        }}
+                      >
+                        {eventData.description}
+                      </ReactMarkdown>
                     </div>
                   )}
                 </div>
@@ -651,7 +694,7 @@ export default function LoginPage() {
                         <div className="flex gap-3">
                           <button
                             onClick={() => handleAnswer(i, true)}
-                            className={`px-6 py-2 text-xs tracking-[0.25em] uppercase border transition-all duration-300 ${
+                            className={`px-10 py-3 text-sm tracking-[0.25em] uppercase border transition-all duration-300 rounded ${
                               answers[i] === true
                                 ? "border-white text-white bg-white/5"
                                 : "border-neutral-700 text-neutral-500 hover:border-neutral-500 hover:text-neutral-300"
@@ -661,7 +704,7 @@ export default function LoginPage() {
                           </button>
                           <button
                             onClick={() => handleAnswer(i, false)}
-                            className={`px-6 py-2 text-xs tracking-[0.25em] uppercase border transition-all duration-300 ${
+                            className={`px-10 py-3 text-sm tracking-[0.25em] uppercase border transition-all duration-300 rounded ${
                               answers[i] === false
                                 ? "border-red-400/70 text-red-400 bg-red-400/5"
                                 : "border-neutral-700 text-neutral-500 hover:border-neutral-500 hover:text-neutral-300"
@@ -694,24 +737,23 @@ export default function LoginPage() {
                     </p>
                   </div>
 
-                  <div className="flex flex-col sm:flex-row gap-4">
-                    {/* YES */}
-                    <button
-                      onClick={() => { setMessage(""); setStep("register") }}
-                      disabled={!allAnsweredYes}
-                      className="group relative flex items-center gap-3 text-xs tracking-[0.3em] uppercase text-neutral-300 hover:text-white transition-all duration-500 disabled:opacity-30 disabled:cursor-not-allowed"
-                    >
-                      <span className="font-light">Yes, Register</span>
-                      <span className="text-lg transition-all duration-500 group-hover:translate-x-1">→</span>
-                    </button>
+                  <div className="flex flex-col gap-3">
+                     {/* YES */}
+                     <button
+                       onClick={() => { setMessage(""); setStep("register") }}
+                       disabled={!allAnsweredYes}
+                       className="w-full py-4 border border-white text-white bg-white/5 hover:bg-white/10 text-sm tracking-[0.25em] uppercase transition-all duration-300 rounded disabled:opacity-30 disabled:cursor-not-allowed"
+                     >
+                       Yes, Register
+                     </button>
 
-                    {/* NO */}
-                    <button
-                      onClick={() => setShowDeclineWarning(true)}
-                      className="text-xs tracking-[0.3em] uppercase text-neutral-600 hover:text-neutral-400 transition-all duration-300"
-                    >
-                      No, Decline
-                    </button>
+                     {/* NO */}
+                     <button
+                       onClick={() => setShowDeclineWarning(true)}
+                       className="w-full py-4 border border-neutral-700 text-neutral-500 hover:border-red-400/40 hover:text-red-400 text-sm tracking-[0.25em] uppercase transition-all duration-300 rounded"
+                     >
+                       No, Decline
+                     </button>
                   </div>
 
                   {!allAnsweredYes && !anyAnsweredNo && (
@@ -915,6 +957,34 @@ export default function LoginPage() {
                     </div>
                   </div>
 
+                  {/* Short Intro */}
+                  <div className="space-y-3 group">
+                    <label className="text-xs tracking-[0.2em] uppercase text-neutral-500 group-focus-within:text-white transition-colors duration-300">
+                      Short Intro (optional)
+                    </label>
+                    <div className="relative">
+                      <textarea
+                        value={applicationData.intro}
+                        onChange={(e) => setApplicationData({ ...applicationData, intro: e.target.value })}
+                        onFocus={() => setFocused("intro")}
+                        onBlur={() => setFocused(null)}
+                        placeholder="Tell us something interesting about yourself..."
+                        rows={4}
+                        className={`w-full bg-transparent text-white placeholder:text-neutral-600 border-b-2 pb-4 focus:outline-none transition-all duration-500 resize-none ${
+                          focused === "intro"
+                            ? "border-white shadow-[0_1px_0_0_rgba(255,255,255,0.3)]"
+                            : "border-neutral-800 hover:border-neutral-700"
+                        }`}
+                      />
+                      {focused === "intro" && (
+                        <div className="absolute -bottom-1 left-0 w-20 h-px bg-gradient-to-r from-white via-white to-transparent" />
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Divider before consent */}
+                  <div className="h-px bg-gradient-to-r from-neutral-800 via-neutral-700 to-transparent" />
+
                   {/* Datenschutz */}
                   <div className="space-y-3">
                     <label className="flex items-start gap-3 cursor-pointer group">
@@ -946,31 +1016,6 @@ export default function LoginPage() {
                         {" "}gelesen und stimme der Verarbeitung meiner personenbezogenen Daten zu. *
                       </span>
                     </label>
-                  </div>
-
-                  {/* Short Intro */}
-                  <div className="space-y-3 group">
-                    <label className="text-xs tracking-[0.2em] uppercase text-neutral-500 group-focus-within:text-white transition-colors duration-300">
-                      Short Intro (optional)
-                    </label>
-                    <div className="relative">
-                      <textarea
-                        value={applicationData.intro}
-                        onChange={(e) => setApplicationData({ ...applicationData, intro: e.target.value })}
-                        onFocus={() => setFocused("intro")}
-                        onBlur={() => setFocused(null)}
-                        placeholder="Tell us something interesting about yourself..."
-                        rows={4}
-                        className={`w-full bg-transparent text-white placeholder:text-neutral-600 border-b-2 pb-4 focus:outline-none transition-all duration-500 resize-none ${
-                          focused === "intro"
-                            ? "border-white shadow-[0_1px_0_0_rgba(255,255,255,0.3)]"
-                            : "border-neutral-800 hover:border-neutral-700"
-                        }`}
-                      />
-                      {focused === "intro" && (
-                        <div className="absolute -bottom-1 left-0 w-20 h-px bg-gradient-to-r from-white via-white to-transparent" />
-                      )}
-                    </div>
                   </div>
 
                   {/* Message */}

@@ -308,10 +308,11 @@ function FormFields({
         <textarea
           value={data.description}
           onChange={(e) => onChange({ ...data, description: e.target.value })}
-          placeholder="Describe the event..."
-          rows={3}
+          placeholder="Describe the event... Supports Markdown: **bold**, *italic*, bullet lists with *, headings with #"
+          rows={8}
           className="w-full bg-transparent border-b border-neutral-800 px-0 py-3 text-white placeholder:text-neutral-600 focus:outline-none focus:border-neutral-600 transition-all duration-300 text-sm resize-none"
         />
+        <p className="text-[10px] tracking-[0.15em] uppercase text-neutral-600 mt-1.5">Markdown supported — **bold**, *italic*, # Heading, * bullet list</p>
       </div>
 
       {/* Poster URL */}

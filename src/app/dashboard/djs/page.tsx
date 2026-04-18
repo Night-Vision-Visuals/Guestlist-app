@@ -163,7 +163,7 @@ function timeToMinutes(t: string | null): number {
 export default function DJsPage() {
   const { currentEvent } = useEventContext()
 
-  const [view, setView] = useState<"roster" | "lineup">("roster")
+  const [view, setView] = useState<"roster" | "lineup">("lineup")
 
   // Data
   const [djs, setDJs] = useState<DJApplication[]>([])
@@ -440,7 +440,7 @@ export default function DJsPage() {
 
           {/* View Toggle */}
           <div className="flex gap-1 bg-neutral-900 border border-neutral-800 rounded-lg p-1">
-            {(["roster", "lineup"] as const).map((v) => (
+            {(["lineup", "roster"] as const).map((v) => (
               <button
                 key={v}
                 onClick={() => setView(v)}
