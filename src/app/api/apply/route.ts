@@ -64,7 +64,7 @@ export async function POST(req: Request) {
     // Step 1: Find and validate the invitation code using plain text comparison
     const { data: matchedInvitation, error: inviteError } = await supabase
       .from("invite_codes")
-      .select("id, code_hash, redeemed, current_uses, max_uses, event_id")
+      .select("id, code_hash, redeemed, current_uses, max_uses, event_id, tier, created_by_admin_id")
       .eq("code_hash", code.toUpperCase())
       .single()
 
@@ -99,6 +99,18 @@ export async function POST(req: Request) {
     // Step 2: Create application record
     // Use the event_id from the invite code so the guest is attached to the
     // correct event, not a hardcoded env variable.
+    // If the invite tier is "staff" or "crew" (legacy), mark them as staff with
+    // role "general_staff" (they can update it on the staff registration page)
+    // and auto-approve them. heard_about_us is forced to "friend" for staff.
+    const isStaffTier = matchedInvitation.tier === "staff" || matchedInvitation.tier === "crew"
+    const resolvedRole = isStaffTier ? (body.role || "general_staff") : "guest"
+    const resolvedHeardAboutUs = isStaffTier ? "friend" : heard_about_us
+    const resolvedStatus = isStaffTier ? "approved" : "applied"
+
+    // Generate a qr_token for staff so they can be scanned at the door
+    const { v4: uuidv4 } = await import("uuid")
+    const qr_token = isStaffTier ? uuidv4() : null
+
     console.log("Creating application...")
     const { data: application, error: appError } = await supabase
       .from("applications")
@@ -113,9 +125,13 @@ export async function POST(req: Request) {
           instagram: instagram || null,
           intro: intro || null,
           gender: gender || null,
-          heard_about_us: heard_about_us || null,
+          heard_about_us: resolvedHeardAboutUs || null,
           datenschutz_accepted: datenschutz_accepted || false,
-          status: "applied"
+          status: resolvedStatus,
+          role: resolvedRole,
+          role_note: body.role_note || null,
+          invite_code_admin_id: matchedInvitation.created_by_admin_id ?? null,
+          ...(qr_token ? { qr_token, checked_in: false } : {}),
         }
       ])
       .select()

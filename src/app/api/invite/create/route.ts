@@ -19,7 +19,7 @@ import { supabase } from "@/lib/supabase"
 import { verifyAdminSession } from "@/lib/auth"
 import crypto from "crypto"
 
-const VALID_TIERS = ["guest", "friendlist", "crew"]
+const VALID_TIERS = ["guest", "friendlist", "staff", "crew"] // crew kept as legacy alias
 
 export async function POST(req: Request) {
   try {
@@ -35,8 +35,8 @@ export async function POST(req: Request) {
     // Validate tier
     const resolvedTier = VALID_TIERS.includes(tier) ? tier : "guest"
 
-    // Enforce max_uses = 1 for friendlist and crew
-    if (resolvedTier === "friendlist" || resolvedTier === "crew") {
+    // Enforce max_uses = 1 for friendlist and staff (crew is legacy alias for staff)
+    if (resolvedTier === "friendlist" || resolvedTier === "staff" || resolvedTier === "crew") {
       max_uses = 1
     } else {
       max_uses = parseInt(max_uses)

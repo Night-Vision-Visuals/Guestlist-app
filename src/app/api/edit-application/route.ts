@@ -30,7 +30,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    const { id, email, status } = await req.json()
+    const { id, email, status, first_name, last_name, role, role_note, gender } = await req.json()
     if (!id) {
       return NextResponse.json({ error: "Application ID is required" }, { status: 400 })
     }
@@ -42,7 +42,11 @@ export async function POST(req: Request) {
 
     // Build update object
     const updateData: Record<string, string | null> = {}
-    if (email) updateData.email = email
+    if (email !== undefined) updateData.email = email
+    if (first_name !== undefined) updateData.first_name = first_name
+    if (last_name !== undefined) updateData.last_name = last_name
+    if (role !== undefined) updateData.role = role
+    if (role_note !== undefined) updateData.role_note = role_note
     if (status) {
       updateData.status = status
       // If newly approving, generate QR token if not already present

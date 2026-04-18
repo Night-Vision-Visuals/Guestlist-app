@@ -63,6 +63,7 @@ interface TierRevenue {
   friendlistCount: number
   friendlistRev: number
   crewCount: number
+  staffCount: number
   unknownCount: number
   unknownRev: number
   total: number
@@ -343,7 +344,7 @@ export default function AnalyticsPage() {
                             <tbody>
                               {[
                                 {
-                                  label: "Guest (code)",
+                                  label: "Guest",
                                   approvedCount: analytics.incomeStats.breakdown.approved.guestCount,
                                   approvedRev:   analytics.incomeStats.breakdown.approved.guestRev,
                                   ciCount:       analytics.incomeStats.breakdown.checkedIn.guestCount,
@@ -356,20 +357,13 @@ export default function AnalyticsPage() {
                                   ciCount:       analytics.incomeStats.breakdown.checkedIn.friendlistCount,
                                   ciRev:         analytics.incomeStats.breakdown.checkedIn.friendlistRev,
                                 },
-                                {
-                                  label: "Crew (free)",
-                                  approvedCount: analytics.incomeStats.breakdown.approved.crewCount,
-                                  approvedRev:   0,
-                                  ciCount:       analytics.incomeStats.breakdown.checkedIn.crewCount,
-                                  ciRev:         0,
-                                },
-                                {
-                                  label: "Direct (no code)",
-                                  approvedCount: analytics.incomeStats.breakdown.approved.unknownCount,
-                                  approvedRev:   analytics.incomeStats.breakdown.approved.unknownRev,
-                                  ciCount:       analytics.incomeStats.breakdown.checkedIn.unknownCount,
-                                  ciRev:         analytics.incomeStats.breakdown.checkedIn.unknownRev,
-                                },
+                                 {
+                                   label: "Staff",
+                                   approvedCount: analytics.incomeStats.breakdown.approved.staffCount + analytics.incomeStats.breakdown.approved.crewCount,
+                                   approvedRev:   0,
+                                   ciCount:       analytics.incomeStats.breakdown.checkedIn.staffCount + analytics.incomeStats.breakdown.checkedIn.crewCount,
+                                   ciRev:         0,
+                                 },
                               ].map(row => (
                                 <tr key={row.label} className="border-b border-neutral-900">
                                   <td className="py-3 pr-6 text-neutral-300 font-light">{row.label}</td>

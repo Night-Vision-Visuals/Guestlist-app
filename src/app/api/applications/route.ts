@@ -29,7 +29,11 @@ export async function GET(req: Request) {
 
     let query = supabase
       .from("applications")
-      .select("*")
+      .select(`
+        *,
+        added_by_admin:added_by_admin_id ( id, username ),
+        invite_code_admin:invite_code_admin_id ( id, username )
+      `)
       .order("created_at", { ascending: false })
 
     if (eventId) {

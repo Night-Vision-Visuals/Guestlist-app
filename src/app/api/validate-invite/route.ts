@@ -38,7 +38,7 @@ export async function POST(req: Request) {
     // Find the invitation code using plain text comparison
     const { data: matchedInvitation, error: fetchError } = await supabase
       .from("invite_codes")
-      .select("id, code_hash, redeemed, current_uses, max_uses, event_id")
+      .select("id, code_hash, redeemed, current_uses, max_uses, event_id, tier")
       .eq("code_hash", code.toUpperCase())
       .single()
 
@@ -85,7 +85,7 @@ export async function POST(req: Request) {
       eventData = event
     }
 
-    return NextResponse.json({ success: true, event: eventData })
+    return NextResponse.json({ success: true, event: eventData, tier: matchedInvitation.tier ?? null })
   } catch (error) {
     console.error("Validate invite error:", error)
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })

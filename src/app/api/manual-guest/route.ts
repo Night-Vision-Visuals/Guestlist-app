@@ -3,17 +3,20 @@
  * POST /api/manual-guest
  *
  * Creates a manually-added guest or staff member for an event. Used by the
- * dashboard "Add Staff / Add Guest" modal. Bypasses the public application form
- * — no DOB or intro required. The record is inserted with status "approved" and
- * a generated QR token so the person can be scanned at the door.
+ * dashboard "Add Staff / Add Guest" modal. The record is inserted with
+ * status "approved" and a generated QR token so the person can be scanned
+ * at the door. The admin who added the record is stored in added_by_admin_id.
  *
  * Body:
  *   event_id      string   (required)
  *   first_name    string   (required)
  *   last_name     string   (required)
- *   email         string   (optional — defaults to empty string)
+ *   email         string   (required)
+ *   gender        string   (required)
  *   role          string   (required — "guest" | "dj" | "security" | "bar_staff" | "general_staff" | "awareness" | "other")
- *   role_note     string   (optional — free text note, e.g. "playing 02:00–04:00")
+ *   role_note     string   (optional)
+ *   date_of_birth string   (required for guests, optional for staff — defaults to 1990-01-01)
+ *   invite_type   string   (optional — "guest" | "friendlist")
  *
  * Auth: admin JWT cookie required.
  */
@@ -32,13 +35,25 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json()
-    const { event_id, first_name, last_name, email = "", role, role_note = "" } = body
+    const { event_id, first_name, last_name, email, gender, role, role_note = "", date_of_birth, invite_type } = body
 
     if (!event_id || !first_name || !last_name || !role) {
       return NextResponse.json(
         { error: "event_id, first_name, last_name and role are required" },
         { status: 400 }
       )
+    }
+
+    if (!email || !email.trim()) {
+      return NextResponse.json({ error: "Email is required" }, { status: 400 })
+    }
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      return NextResponse.json({ error: "Please enter a valid email address" }, { status: 400 })
+    }
+
+    if (!gender || !gender.trim()) {
+      return NextResponse.json({ error: "Gender is required" }, { status: 400 })
     }
 
     if (!VALID_ROLES.includes(role)) {
@@ -67,16 +82,18 @@ export async function POST(req: Request) {
         event_id,
         first_name,
         last_name,
-        email,
+        email: email.trim(),
+        gender,
         role,
         role_note: role_note || null,
+        invite_type: invite_type || (role === "guest" ? "guest" : null),
         status: "approved",
         qr_token,
         checked_in: false,
         no_show_count: 0,
-        // Placeholder DOB — staff don't need age validation
-        date_of_birth: "1990-01-01",
+        date_of_birth: date_of_birth || "1990-01-01",
         age_flagged: false,
+        added_by_admin_id: admin.adminId,
       })
       .select()
       .single()

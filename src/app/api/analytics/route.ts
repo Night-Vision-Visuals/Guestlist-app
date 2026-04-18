@@ -146,8 +146,11 @@ export async function GET(req: Request) {
 
     const calcGuestPrice = (app: any): number => {
       if (entryFee === null) return 0
-      const tier = app.invitation_code_id ? (codeToTier[app.invitation_code_id] || "guest") : "guest"
-      if (tier === "crew") return 0
+      // Staff members (any non-guest role) are always free
+      if (app.role && app.role !== "guest") return 0
+      const codeTier = app.invitation_code_id ? (codeToTier[app.invitation_code_id] || null) : null
+      const tier = codeTier ?? app.invite_type ?? "guest"
+      if (tier === "crew" || tier === "staff") return 0
       if (tier === "friendlist") {
         const discount = friendlistDiscount ?? 0
         return entryFee * (1 - discount / 100)
@@ -158,24 +161,33 @@ export async function GET(req: Request) {
     const approvedList   = apps.filter((a: any) => a.status === "approved")
     const checkedInList  = apps.filter((a: any) => a.checked_in)
 
-    // Per-tier counts & revenue
+    // Per-tier counts & revenue — staff are tracked separately, not in revenue
     const tierRevenue = (list: any[]) => {
       let guestCount = 0, guestRev = 0
       let friendlistCount = 0, friendlistRev = 0
       let crewCount = 0
-      let unknownCount = 0, unknownRev = 0
+      let staffCount = 0
 
       list.forEach((a: any) => {
-        const tier = a.invitation_code_id ? (codeToTier[a.invitation_code_id] || "guest") : "guest"
+        // Staff members go into their own bucket, never into revenue
+        if (a.role && a.role !== "guest") { staffCount++; return }
+
+        // Determine tier: prefer the invite code tier if present,
+        // otherwise fall back to the application's own invite_type field
+        // (covers manually-added guests who have no invitation_code_id)
+        const codeTier = a.invitation_code_id ? (codeToTier[a.invitation_code_id] || null) : null
+        const tier = codeTier ?? a.invite_type ?? "guest"
+
         const price = calcGuestPrice(a)
-        if (tier === "crew") { crewCount++ }
+        if (tier === "crew" || tier === "staff") { crewCount++ }
         else if (tier === "friendlist") { friendlistCount++; friendlistRev += price }
-        else if (a.invitation_code_id) { guestCount++; guestRev += price }
-        else { unknownCount++; unknownRev += price }
+        else { guestCount++; guestRev += price }
       })
 
-      return { guestCount, guestRev, friendlistCount, friendlistRev, crewCount, unknownCount, unknownRev,
-        total: guestRev + friendlistRev + unknownRev }
+      return { guestCount, guestRev, friendlistCount, friendlistRev, crewCount, staffCount,
+        // keep unknownCount/unknownRev as zero for API shape compatibility
+        unknownCount: 0, unknownRev: 0,
+        total: guestRev + friendlistRev }
     }
 
     const approvedRevenue  = tierRevenue(approvedList)

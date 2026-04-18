@@ -37,13 +37,15 @@ interface AdminSummary {
 const TIER_LABELS: Record<string, string> = {
   guest: "Guest",
   friendlist: "Friendlist",
-  crew: "Crew",
+  staff: "Staff",
+  crew: "Staff", // legacy alias
 }
 
 const TIER_COLORS: Record<string, string> = {
   guest: "text-cyan-400 border-cyan-400/30 bg-cyan-400/5",
   friendlist: "text-purple-400 border-purple-400/30 bg-purple-400/5",
-  crew: "text-yellow-400 border-yellow-400/30 bg-yellow-400/5",
+  staff: "text-yellow-400 border-yellow-400/30 bg-yellow-400/5",
+  crew: "text-yellow-400 border-yellow-400/30 bg-yellow-400/5", // legacy alias
 }
 
 function copyToClipboard(text: string): Promise<void> {
@@ -77,7 +79,7 @@ export default function InvitesPage() {
   const [generatedTier, setGeneratedTier] = useState<string>("guest")
   const [copied, setCopied] = useState(false)
   const [formData, setFormData] = useState({
-    tier: "guest",
+    tier: "guest" as "guest" | "friendlist" | "staff",
     max_uses: 1,
     comment: "",
   })
@@ -89,9 +91,9 @@ export default function InvitesPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentEvent])
 
-  // Auto-lock max_uses to 1 when tier changes to friendlist/crew
+  // Auto-lock max_uses to 1 when tier changes to friendlist/staff
   useEffect(() => {
-    if (formData.tier === "friendlist" || formData.tier === "crew") {
+    if (formData.tier === "friendlist" || formData.tier === "staff") {
       setFormData(prev => ({ ...prev, max_uses: 1 }))
     }
   }, [formData.tier])
@@ -392,7 +394,7 @@ export default function InvitesPage() {
                     Tier
                   </label>
                   <div className="flex gap-3">
-                    {(["guest", "friendlist", "crew"] as const).map((t) => (
+                    {(["guest", "friendlist", "staff"] as const).map((t) => (
                       <button
                         key={t}
                         type="button"
@@ -410,11 +412,10 @@ export default function InvitesPage() {
                   <p className="text-[10px] text-neutral-600 mt-2 tracking-[0.1em]">
                     {formData.tier === "guest" && "Standard guest code — up to 100 uses."}
                     {formData.tier === "friendlist" && "Friendlist code — single-use, receives friendlist discount."}
-                    {formData.tier === "crew" && "Crew code — single-use, always free entry."}
+                    {formData.tier === "staff" && "Staff code — single-use, always free entry. Registers to the staff tab."}
                   </p>
                 </div>
 
-                {/* Max Uses — only shown for guest tier */}
                 {formData.tier === "guest" && (
                   <div>
                     <label className="text-xs tracking-[0.2em] uppercase text-neutral-500 mb-2 block">

@@ -291,6 +291,11 @@ export default function LoginPage() {
       })
       const data = await res.json()
       if (data.success) {
+        // If this is a staff/crew code, redirect to the staff registration page
+        if (data.tier === "staff" || data.tier === "crew") {
+          window.location.href = `/staff?code=${encodeURIComponent(fullCode)}`
+          return
+        }
         setEventData(data.event || null)
         setStep("event-info")
         setMessage("")
