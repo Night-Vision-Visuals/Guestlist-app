@@ -22,11 +22,11 @@ export function MusicToggle() {
     <>
       <button
         onClick={toggleMusic}
-        className="fixed bottom-6 right-6 z-40 group p-3 rounded-full border border-neutral-800 hover:border-emerald-400 bg-black/50 backdrop-blur-sm transition-all duration-300 hover:bg-black/80"
+        className="fixed bottom-6 right-6 z-40 group p-3 rounded-full border border-neutral-800 hover:border-orange-400 bg-black/50 backdrop-blur-sm transition-all duration-300 hover:bg-black/80"
         title={isPlaying ? "Mute" : "Unmute"}
       >
         {isPlaying ? (
-          <Volume2 size={20} className="text-emerald-400 group-hover:scale-110 transition-transform duration-300" />
+          <Volume2 size={20} className="text-orange-400 group-hover:scale-110 transition-transform duration-300" />
         ) : (
           <VolumeX size={20} className="text-neutral-500 group-hover:text-white transition-colors duration-300" />
         )}

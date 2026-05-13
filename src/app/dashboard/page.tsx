@@ -33,6 +33,7 @@ interface Application {
   age_flagged: boolean | null
   email_sent_at: string | null
   email_type: string | null
+  ticket_generated_at: string | null
   role: string
   role_note: string | null
   added_by_admin: AdminRef | null
@@ -154,6 +155,10 @@ export default function DashboardPage() {
   const [isEditingStaff, setIsEditingStaff] = useState(false)
   const [staffEditError, setStaffEditError] = useState("")
 
+  // Staff +1 codes: map of application_id → invite code hash (or null)
+  const [staffPlusOneCodes, setStaffPlusOneCodes] = useState<Record<string, string | null>>({})
+  const [revokingPlusOneId, setRevokingPlusOneId] = useState<string | null>(null)
+
   // Email state
   const [eventEmailState, setEventEmailState] = useState<EventEmailState | null>(null)
   const [isSendingEmails, setIsSendingEmails] = useState(false)
@@ -243,6 +248,13 @@ export default function DashboardPage() {
           setFilterAgeMin(Math.min(...ages))
           setFilterAgeMax(Math.max(...ages))
         }
+        // Fetch +1 codes for staff members
+        const staffIds = (data as Application[])
+          .filter(a => a.role && a.role !== "guest")
+          .map(a => a.id)
+        if (staffIds.length > 0) {
+          fetchStaffPlusOneCodes(staffIds)
+        }
       }
       setError("")
     } catch (err) {
@@ -251,6 +263,48 @@ export default function DashboardPage() {
       router.push("/admin")
     } finally {
       setIsLoading(false)
+    }
+  }
+
+  const fetchStaffPlusOneCodes = async (applicationIds: string[]) => {
+    try {
+      const params = new URLSearchParams()
+      applicationIds.forEach(id => params.append("appId", id))
+      const res = await fetch(`/api/invite/staff-plus-one?${params.toString()}`, { credentials: "include" })
+      if (res.ok) {
+        const data = await res.json()
+        setStaffPlusOneCodes(data.codes || {})
+      }
+    } catch {
+      // non-critical
+    }
+  }
+
+  const handleRevokePlusOne = async (applicationId: string) => {
+    const code = staffPlusOneCodes[applicationId]
+    if (!code) return
+    if (!confirm(`Revoke the +1 code for this staff member? Their friend's invite code (${code}) will be invalidated.`)) return
+    setRevokingPlusOneId(applicationId)
+    try {
+      // Find the invite code id first
+      const listRes = await fetch(`/api/invite/staff-plus-one?appId=${applicationId}`, { credentials: "include" })
+      if (!listRes.ok) return
+      const listData = await listRes.json()
+      const codeId = listData.codeId
+      if (!codeId) return
+      const res = await fetch("/api/invite/revoke", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: codeId }),
+        credentials: "include",
+      })
+      if (res.ok) {
+        setStaffPlusOneCodes(prev => ({ ...prev, [applicationId]: null }))
+      }
+    } catch {
+      // non-critical
+    } finally {
+      setRevokingPlusOneId(null)
     }
   }
 
@@ -1166,23 +1220,48 @@ export default function DashboardPage() {
                              <span className={`text-[10px] px-2 py-0.5 rounded border tracking-[0.15em] uppercase font-light whitespace-nowrap ${getStatusBadge(app.status)}`}>
                                {app.status}{app.checked_in ? " ✓" : ""}
                              </span>
-                             {/* Mail + source icons grouped together */}
-                             <div className="flex items-center gap-1.5">
-                               {(app.status === "approved" || app.status === "rejected") && (
-                                 <span title={app.email_sent_at ? `Email sent ${new Date(app.email_sent_at).toLocaleString()}` : "Email not sent yet"}>
-                                   {app.email_sent_at
-                                     ? <Mail size={13} className="text-emerald-500 shrink-0" />
-                                     : <Mail size={13} className="text-neutral-700 shrink-0" />
-                                   }
-                                 </span>
-                               )}
-                               {app.added_by_admin
-                                 ? <span title={`Manually added by ${app.added_by_admin.username}`}><UserPlus size={13} className="text-neutral-500 shrink-0" /></span>
-                                 : app.invite_code_admin
-                                   ? <span title={`Registered via code — ${app.invite_code_admin.username}`}><QrCode size={13} className="text-neutral-500 shrink-0" /></span>
-                                   : null
-                               }
-                             </div>
+                              {/* Mail + source icons grouped together */}
+                              <div className="flex items-center gap-1.5">
+                                {(app.status === "approved" || app.status === "rejected") && (
+                                  <span title={app.email_sent_at ? `Email sent ${new Date(app.email_sent_at).toLocaleString()}` : "Email not sent yet"}>
+                                    {app.email_sent_at
+                                      ? <Mail size={13} className="text-emerald-500 shrink-0" />
+                                      : <Mail size={13} className="text-neutral-700 shrink-0" />
+                                    }
+                                  </span>
+                                )}
+                                {app.added_by_admin
+                                  ? <span title={`Manually added by ${app.added_by_admin.username}`}><UserPlus size={13} className="text-neutral-500 shrink-0" /></span>
+                                  : app.invite_code_admin
+                                    ? <span title={`Registered via code — ${app.invite_code_admin.username}`}><QrCode size={13} className="text-neutral-500 shrink-0" /></span>
+                                    : null
+                                }
+                              </div>
+                              {/* Ticket action status — only shown when email was sent */}
+                              {app.email_sent_at && app.role === "guest" && (() => {
+                                if (app.status === "cancelled") {
+                                  return (
+                                    <span className="text-[10px] px-2 py-0.5 rounded border tracking-[0.1em] font-mono text-neutral-400 border-neutral-700 bg-neutral-800/60" title="Guest cancelled their spot">
+                                      Cancelled
+                                    </span>
+                                  )
+                                }
+                                if (app.ticket_generated_at) {
+                                  return (
+                                    <span className="text-[10px] px-2 py-0.5 rounded border tracking-[0.1em] font-mono text-emerald-400 border-emerald-400/30 bg-emerald-400/10" title={`Ticket generated ${new Date(app.ticket_generated_at).toLocaleString()}`}>
+                                      Generated
+                                    </span>
+                                  )
+                                }
+                                if (app.status === "approved") {
+                                  return (
+                                    <span className="text-[10px] px-2 py-0.5 rounded border tracking-[0.1em] font-mono text-amber-400 border-amber-400/30 bg-amber-400/10" title="Email sent, guest hasn't generated their ticket yet">
+                                      Pending
+                                    </span>
+                                  )
+                                }
+                                return null
+                              })()}
                              <span className="text-neutral-600 text-xs hidden md:block">{new Date(app.created_at).toLocaleDateString()}</span>
                              <div className="flex items-center gap-1 ml-auto">
                               <button onClick={() => editingId === app.id ? setEditingId(null) : startEdit(app)} title="Edit" className="p-1.5 text-neutral-500 hover:text-white hover:bg-neutral-800 rounded transition-all">
@@ -1437,6 +1516,28 @@ export default function DashboardPage() {
                           <span className={`text-[10px] px-2 py-0.5 border rounded tracking-[0.12em] uppercase font-mono shrink-0 ${ROLE_BADGE[person.role] ?? "text-neutral-400 border-neutral-700 bg-neutral-800"}`}>
                             {ROLE_LABEL[person.role] ?? person.role}
                           </span>
+
+                          {/* +1 code badge */}
+                          {staffPlusOneCodes[person.id] !== undefined && (
+                            staffPlusOneCodes[person.id] ? (
+                              <span
+                                className="group relative flex items-center gap-1 text-[10px] px-2 py-0.5 border rounded tracking-[0.12em] uppercase font-mono text-purple-400 border-purple-400/40 bg-purple-400/10 cursor-default"
+                                title={`+1 code: ${staffPlusOneCodes[person.id]}`}
+                              >
+                                +1 {staffPlusOneCodes[person.id]}
+                                <button
+                                  onClick={() => handleRevokePlusOne(person.id)}
+                                  disabled={revokingPlusOneId === person.id}
+                                  title="Revoke +1 code"
+                                  className="ml-1 text-purple-600 hover:text-red-400 transition-colors disabled:opacity-40"
+                                >
+                                  ×
+                                </button>
+                              </span>
+                            ) : (
+                              <span className="text-[10px] text-neutral-700 tracking-[0.1em] uppercase font-mono">no +1</span>
+                            )
+                          )}
                           {person.checked_in ? (
                             <span className="flex items-center gap-1 text-[10px] text-emerald-400 tracking-[0.1em] uppercase">
                               <CheckCheck size={12} />

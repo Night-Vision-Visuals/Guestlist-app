@@ -107,7 +107,8 @@ async function calcEntryPrice(app: ApplicationRow, event: EventRow): Promise<num
 async function sendEmailForApplication(
   resend: Resend,
   app: ApplicationRow,
-  event: EventRow
+  event: EventRow,
+  plusOneCode?: string
 ): Promise<void> {
   const appUrl = getAppUrl()
   const guestName = `${app.first_name} ${app.last_name}`
@@ -132,6 +133,7 @@ async function sendEmailForApplication(
       ticketUrl,
       qrCodeDataUrl,
       entryPrice,
+      plusOneCode,
     })
     subject = `You're on the list — ${event.name}`
   } else if (app.status === "rejected") {
@@ -221,8 +223,9 @@ export async function sendPendingEmails(eventId: string): Promise<SendResult> {
 /**
  * Send an email immediately to a single application.
  * Used when batch has already been sent and a new guest gets approved/rejected.
+ * Pass plusOneCode for staff members who earned a +1 invite code on approval.
  */
-export async function sendSingleEmail(applicationId: string): Promise<SendResult> {
+export async function sendSingleEmail(applicationId: string, plusOneCode?: string): Promise<SendResult> {
   const result: SendResult = { sent: 0, failed: 0, skipped: 0, errors: [] }
 
   const { data: app, error: appError } = await supabase
@@ -260,7 +263,7 @@ export async function sendSingleEmail(applicationId: string): Promise<SendResult
   const resend = getResend()
 
   try {
-    await sendEmailForApplication(resend, app as ApplicationRow, event as EventRow)
+    await sendEmailForApplication(resend, app as ApplicationRow, event as EventRow, plusOneCode)
     result.sent++
   } catch (err) {
     result.failed++

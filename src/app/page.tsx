@@ -145,7 +145,7 @@ export default function LandingPage() {
         playsInline
         className="fixed w-full h-full overflow-hidden object-cover"
       >
-        <source src="/VIdeo/bg.mp4" type="video/mp4" />
+        <source src="/Video/bg.mp4" type="video/mp4" />
       </video>
       {/* 🌑 Dark overlay for readability */}
       <div className="fixed inset-0 bg-black/88" />
@@ -153,7 +153,7 @@ export default function LandingPage() {
       {/* Content */}
       <div className="relative z-10">
         {/* Navigation */}
-        <nav className="flex justify-between items-center px-6 md:px-16 py-8 border-b border-neutral-800/50 backdrop-blur-sm">
+        <nav className="fixed top-0 left-0 right-0 z-50 flex justify-between items-center px-6 md:px-16 py-4 border-b border-neutral-800/50 backdrop-blur-sm bg-black/60">
           <div className="flex items-center gap-3">
             <Image
               src="/logo.png"

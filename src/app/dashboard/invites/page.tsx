@@ -23,6 +23,7 @@ interface Invitation {
   invite_type: string | null
   tier: string | null
   comment: string | null
+  is_staff_plus_one: boolean | null
   admins: Admin | null
 }
 
@@ -32,6 +33,20 @@ interface AdminSummary {
   codesCreated: number
   totalCapacity: number
   totalUsed: number
+}
+
+interface QuotaInfo {
+  total_used: number
+  total_limit: number | null
+  quotas: {
+    admin_id: string
+    username: string
+    friendlist_quota: number | null
+    codes_used: number
+    codes_remaining: number | null
+  }[]
+  myQuota: number | null
+  myUsed: number
 }
 
 const TIER_LABELS: Record<string, string> = {
@@ -78,6 +93,7 @@ export default function InvitesPage() {
   const [generatedCode, setGeneratedCode] = useState<string | null>(null)
   const [generatedTier, setGeneratedTier] = useState<string>("guest")
   const [copied, setCopied] = useState(false)
+  const [quotaInfo, setQuotaInfo] = useState<QuotaInfo | null>(null)
   const [formData, setFormData] = useState({
     tier: "guest" as "guest" | "friendlist" | "staff",
     max_uses: 1,
@@ -114,6 +130,28 @@ export default function InvitesPage() {
       const data = await res.json()
       setInvites(data || [])
       setError("")
+
+      // Fetch quota info for this event
+      if (eventId) {
+        const meRes = await fetch("/api/me", { credentials: "include" })
+        const meData = meRes.ok ? await meRes.json() : null
+        const myAdminId = meData?.adminId || null
+
+        const qRes = await fetch(`/api/events/admin-quotas?eventId=${eventId}`, { credentials: "include" })
+        if (qRes.ok) {
+          const qData = await qRes.json()
+          const myEntry = myAdminId ? (qData.quotas || []).find((q: { admin_id: string }) => q.admin_id === myAdminId) : null
+          setQuotaInfo({
+            total_used: qData.total_used ?? 0,
+            total_limit: qData.total_limit ?? null,
+            quotas: qData.quotas || [],
+            myQuota: myEntry?.friendlist_quota ?? null,
+            myUsed: myEntry?.codes_used ?? 0,
+          })
+        }
+      } else {
+        setQuotaInfo(null)
+      }
     } catch (err) {
       console.error(err)
       setError("Error fetching invitations")
@@ -325,6 +363,28 @@ export default function InvitesPage() {
                 : "Create and manage invitation codes"}
             </p>
             <div className="h-px bg-gradient-to-r from-white/40 to-transparent w-20" />
+
+            {/* Friendlist quota status */}
+            {quotaInfo && (
+              <div className="flex flex-wrap gap-3 pt-1">
+                <span className={`text-[10px] px-3 py-1 rounded border tracking-[0.15em] uppercase font-mono ${
+                  quotaInfo.total_limit !== null && quotaInfo.total_used >= quotaInfo.total_limit
+                    ? "text-red-400 border-red-400/40 bg-red-400/10"
+                    : "text-amber-400 border-amber-400/30 bg-amber-400/10"
+                }`}>
+                  Friendlist total: {quotaInfo.total_used}{quotaInfo.total_limit !== null ? ` / ${quotaInfo.total_limit}` : ""}
+                </span>
+                {quotaInfo.myQuota !== null && (
+                  <span className={`text-[10px] px-3 py-1 rounded border tracking-[0.15em] uppercase font-mono ${
+                    quotaInfo.myUsed >= quotaInfo.myQuota
+                      ? "text-red-400 border-red-400/40 bg-red-400/10"
+                      : "text-purple-400 border-purple-400/30 bg-purple-400/10"
+                  }`}>
+                    Your quota: {quotaInfo.myUsed} / {quotaInfo.myQuota}
+                  </span>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Messages */}
@@ -483,6 +543,11 @@ export default function InvitesPage() {
                         {tierLabel && (
                           <span className={`inline-block mt-1 text-[10px] px-2 py-0.5 border rounded tracking-[0.1em] uppercase ${tierColor}`}>
                             {tierLabel}
+                          </span>
+                        )}
+                        {invite.is_staff_plus_one && (
+                          <span className="inline-block mt-1 ml-1 text-[10px] px-2 py-0.5 border rounded tracking-[0.1em] uppercase text-purple-300 border-purple-300/40 bg-purple-300/10">
+                            Staff +1
                           </span>
                         )}
                       </div>

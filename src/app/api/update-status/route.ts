@@ -12,6 +12,9 @@
  *                 and generates a UUID QR token stored in `qr_token`. If ≥ 130,
  *                 auto-moves to "waitlist" instead. The QR token powers the
  *                 /ticket/[token] page the guest uses for door entry.
+ *                 If the approved application is a staff member whose role is in
+ *                 the event's plus_one_eligible_roles, a single-use friendlist
+ *                 invite code is auto-generated and attached to the approval email.
  *   "reject"    — sets status "rejected"
  *   "waitlist"  — sets status "waitlist"
  *   "cancelled" — sets status "cancelled" (guest-initiated; not treated as no-show)
@@ -23,7 +26,7 @@
  *
  * The 130-guest cap is hardcoded here. Adjust it if the venue capacity changes.
  *
- * Returns { success: true, qr_token? } on success.
+ * Returns { success: true, qr_token?, plus_one_code? } on success.
  *
  * Auth: admin JWT cookie required.
  */
@@ -31,6 +34,7 @@ import { NextResponse } from "next/server"
 import { supabase } from "@/lib/supabase"
 import { verifyAdminSession } from "@/lib/auth"
 import { v4 as uuidv4 } from "uuid"
+import crypto from "crypto"
 import { isBatchSent, sendSingleEmail } from "@/lib/sendEmails"
 
 export async function POST(req: Request) {
@@ -87,9 +91,10 @@ export async function POST(req: Request) {
       updateData.qr_token = qrToken
     }
 
+    // Fetch application row (need role, event_id, etc. for +1 logic and email)
     const { data: appRow, error: fetchError } = await supabase
       .from("applications")
-      .select("event_id")
+      .select("event_id, role")
       .eq("id", id)
       .single()
 
@@ -106,18 +111,73 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Update failed" }, { status: 500 })
     }
 
+    // ── Auto-generate crew +1 code on staff approval ──────────────────────────
+    let plusOneCode: string | null = null
+
+    if (newStatus === "approved" && appRow.role && appRow.role !== "guest" && appRow.event_id) {
+      // Check if this role is in the event's plus_one_eligible_roles
+      const { data: eventRow } = await supabase
+        .from("events")
+        .select("plus_one_eligible_roles")
+        .eq("id", appRow.event_id)
+        .single()
+
+      const eligibleRoles: string[] | null = eventRow?.plus_one_eligible_roles ?? null
+
+      if (eligibleRoles && eligibleRoles.includes(appRow.role)) {
+        // Check if a +1 code already exists for this application (prevent duplicates on re-approve)
+        const { data: existingCode } = await supabase
+          .from("invite_codes")
+          .select("code_hash, revoked_at")
+          .eq("linked_staff_application_id", id)
+          .single()
+
+        if (existingCode && !existingCode.revoked_at) {
+          // Already has an active +1 code — reuse it
+          plusOneCode = existingCode.code_hash
+        } else {
+          // Generate new +1 code
+          const rawCode = crypto.randomBytes(3).toString("hex").toUpperCase()
+          const { data: newCode, error: codeInsertError } = await supabase
+            .from("invite_codes")
+            .insert([{
+              code_hash: rawCode,
+              max_uses: 1,
+              current_uses: 0,
+              redeemed: false,
+              created_by_admin_id: admin.adminId,
+              tier: "friendlist",
+              is_staff_plus_one: true,
+              linked_staff_application_id: id,
+              event_id: appRow.event_id,
+              comment: `Staff +1 for application ${id}`,
+            }])
+            .select("code_hash")
+            .single()
+
+          if (!codeInsertError && newCode) {
+            plusOneCode = newCode.code_hash
+          } else {
+            // Non-fatal: log but don't fail the approval
+            console.error("Failed to generate +1 code for staff application", id, codeInsertError)
+          }
+        }
+      }
+    }
+    // ─────────────────────────────────────────────────────────────────────────
+
     // If batch has already been sent, email this guest immediately
     if (newStatus === "approved" || newStatus === "rejected") {
       const batchAlreadySent = await isBatchSent(appRow.event_id)
       if (batchAlreadySent) {
         // Fire-and-forget — don't block the response on email delivery
-        sendSingleEmail(id).catch((err) =>
+        sendSingleEmail(id, plusOneCode ?? undefined).catch((err) =>
           console.error("Immediate email send failed for", id, err)
         )
       }
     }
 
-    return NextResponse.json({ success: true, qr_token: qrToken })
+    return NextResponse.json({ success: true, qr_token: qrToken, plus_one_code: plusOneCode })
   } catch (error) {
     console.error("Error:", error)
     return NextResponse.json(

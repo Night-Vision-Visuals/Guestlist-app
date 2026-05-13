@@ -5,6 +5,15 @@ import { useRouter } from "next/navigation"
 import { useEventContext } from "@/lib/EventContext"
 import { Pencil, Trash2, Check, X, ChevronLeft, ChevronRight } from "lucide-react"
 
+const STAFF_ROLES = [
+  { value: "dj",            label: "DJ" },
+  { value: "security",      label: "Security" },
+  { value: "bar_staff",     label: "Bar Staff" },
+  { value: "general_staff", label: "General Staff" },
+  { value: "awareness",     label: "Awareness" },
+  { value: "other",         label: "Other" },
+]
+
 interface EventForm {
   name: string
   event_date: string
@@ -15,6 +24,8 @@ interface EventForm {
   max_age: string
   entry_fee: string
   friendlist_discount: string
+  friendlist_total_limit: string
+  plus_one_eligible_roles: string[]
 }
 
 interface EventRecord {
@@ -28,7 +39,17 @@ interface EventRecord {
   max_age: number | null
   entry_fee: number | null
   friendlist_discount: number | null
+  friendlist_total_limit: number | null
+  plus_one_eligible_roles: string[] | null
   created_at: string
+}
+
+interface AdminQuota {
+  admin_id: string
+  username: string
+  friendlist_quota: number | null
+  codes_used: number
+  codes_remaining: number | null
 }
 
 const emptyForm: EventForm = {
@@ -41,6 +62,8 @@ const emptyForm: EventForm = {
   max_age: "",
   entry_fee: "",
   friendlist_discount: "",
+  friendlist_total_limit: "",
+  plus_one_eligible_roles: [],
 }
 
 // ─── Calendar picker ──────────────────────────────────────────────────────────
@@ -298,6 +321,55 @@ function FormFields({
             className="w-full bg-transparent border-b border-neutral-800 px-0 py-3 text-white placeholder:text-neutral-600 focus:outline-none focus:border-neutral-600 transition-all duration-300 text-sm"
           />
         </div>
+
+        {/* Friendlist Total Limit */}
+        <div>
+          <label className="text-xs tracking-[0.2em] uppercase text-neutral-500 mb-2 block">
+            Friendlist Code Cap (optional)
+          </label>
+          <input
+            type="number"
+            min="0"
+            value={data.friendlist_total_limit}
+            onChange={(e) => onChange({ ...data, friendlist_total_limit: e.target.value })}
+            placeholder="e.g. 30 — max manual friendlist codes"
+            className="w-full bg-transparent border-b border-neutral-800 px-0 py-3 text-white placeholder:text-neutral-600 focus:outline-none focus:border-neutral-600 transition-all duration-300 text-sm"
+          />
+        </div>
+      </div>
+
+      {/* +1 Eligible Roles */}
+      <div>
+        <label className="text-xs tracking-[0.2em] uppercase text-neutral-500 mb-3 block">
+          Crew Roles Eligible for +1 (optional)
+        </label>
+        <p className="text-[10px] tracking-[0.15em] uppercase text-neutral-600 mb-3">
+          Selected roles get a free single-use friendlist code for a friend when approved
+        </p>
+        <div className="flex flex-wrap gap-3">
+          {STAFF_ROLES.map(role => {
+            const checked = data.plus_one_eligible_roles.includes(role.value)
+            return (
+              <button
+                key={role.value}
+                type="button"
+                onClick={() => {
+                  const next = checked
+                    ? data.plus_one_eligible_roles.filter(r => r !== role.value)
+                    : [...data.plus_one_eligible_roles, role.value]
+                  onChange({ ...data, plus_one_eligible_roles: next })
+                }}
+                className={`px-3 py-1.5 text-xs tracking-[0.1em] uppercase rounded border transition-all duration-200 ${
+                  checked
+                    ? "text-purple-400 border-purple-400/60 bg-purple-400/10"
+                    : "text-neutral-500 border-neutral-700 hover:border-neutral-500 hover:text-neutral-300"
+                }`}
+              >
+                {role.label}
+              </button>
+            )
+          })}
+        </div>
       </div>
 
       {/* Description */}
@@ -357,6 +429,11 @@ export default function EventsPage() {
   const [editingEventId, setEditingEventId] = useState<string | null>(null)
   const [editFormData, setEditFormData] = useState<EventForm>(emptyForm)
   const [adminUsername, setAdminUsername] = useState<string | null>(null)
+  const [adminQuotas, setAdminQuotas] = useState<AdminQuota[]>([])
+  const [quotaEventId, setQuotaEventId] = useState<string | null>(null)
+  const [quotaEdits, setQuotaEdits] = useState<Record<string, string>>({})
+  const [quotaSaving, setQuotaSaving] = useState(false)
+  const [quotaSuccess, setQuotaSuccess] = useState("")
 
   const todayISO = new Date().toISOString().split("T")[0]
 
@@ -387,6 +464,8 @@ export default function EventsPage() {
           max_age: formData.max_age || null,
           entry_fee: formData.entry_fee || null,
           friendlist_discount: formData.friendlist_discount || null,
+          friendlist_total_limit: formData.friendlist_total_limit || null,
+          plus_one_eligible_roles: formData.plus_one_eligible_roles,
         }),
         credentials: "include",
       })
@@ -426,6 +505,8 @@ export default function EventsPage() {
           max_age: editFormData.max_age || null,
           entry_fee: editFormData.entry_fee || null,
           friendlist_discount: editFormData.friendlist_discount || null,
+          friendlist_total_limit: editFormData.friendlist_total_limit || null,
+          plus_one_eligible_roles: editFormData.plus_one_eligible_roles,
         }),
         credentials: "include",
       })
@@ -484,7 +565,45 @@ export default function EventsPage() {
       max_age: event.max_age?.toString() || "",
       entry_fee: event.entry_fee?.toString() || "",
       friendlist_discount: event.friendlist_discount?.toString() || "",
+      friendlist_total_limit: event.friendlist_total_limit?.toString() || "",
+      plus_one_eligible_roles: event.plus_one_eligible_roles || [],
     })
+  }
+
+  const openQuotaManager = async (eventId: string) => {
+    setQuotaEventId(eventId)
+    setQuotaSuccess("")
+    const res = await fetch(`/api/events/admin-quotas?eventId=${eventId}`, { credentials: "include" })
+    if (res.ok) {
+      const data = await res.json()
+      setAdminQuotas(data.quotas || [])
+      const edits: Record<string, string> = {}
+      for (const q of data.quotas || []) {
+        edits[q.admin_id] = q.friendlist_quota !== null ? String(q.friendlist_quota) : ""
+      }
+      setQuotaEdits(edits)
+    }
+  }
+
+  const saveQuotas = async () => {
+    if (!quotaEventId) return
+    setQuotaSaving(true)
+    setQuotaSuccess("")
+    const quotas = adminQuotas.map(q => ({
+      admin_id: q.admin_id,
+      friendlist_quota: parseInt(quotaEdits[q.admin_id] || "0") || 0,
+    }))
+    const res = await fetch("/api/events/admin-quotas", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ event_id: quotaEventId, quotas }),
+      credentials: "include",
+    })
+    if (res.ok) {
+      setQuotaSuccess("Quotas saved")
+      await openQuotaManager(quotaEventId)
+    }
+    setQuotaSaving(false)
   }
 
   const isPastEvent = (eventDate: string) => new Date(eventDate + "T12:00:00") < new Date()
@@ -644,7 +763,7 @@ export default function EventsPage() {
                           </div>
                         </div>
 
-                        {(event.min_age || event.max_age || event.entry_fee != null || event.friendlist_discount != null) && (
+                        {(event.min_age || event.max_age || event.entry_fee != null || event.friendlist_discount != null || event.friendlist_total_limit != null || (event.plus_one_eligible_roles && event.plus_one_eligible_roles.length > 0)) && (
                           <div className="mb-4 flex gap-2 flex-wrap">
                             {(event.min_age || event.max_age) && (
                               <span className="text-[10px] px-2 py-0.5 rounded border text-orange-400 border-orange-400/30 bg-orange-400/10 tracking-[0.1em]">
@@ -659,6 +778,16 @@ export default function EventsPage() {
                             {event.friendlist_discount != null && (
                               <span className="text-[10px] px-2 py-0.5 rounded border text-purple-400 border-purple-400/30 bg-purple-400/10 tracking-[0.1em]">
                                 Friendlist: {event.friendlist_discount}% off
+                              </span>
+                            )}
+                            {event.friendlist_total_limit != null && (
+                              <span className="text-[10px] px-2 py-0.5 rounded border text-amber-400 border-amber-400/30 bg-amber-400/10 tracking-[0.1em]">
+                                FL Cap: {event.friendlist_total_limit}
+                              </span>
+                            )}
+                            {event.plus_one_eligible_roles && event.plus_one_eligible_roles.length > 0 && (
+                              <span className="text-[10px] px-2 py-0.5 rounded border text-emerald-400 border-emerald-400/30 bg-emerald-400/10 tracking-[0.1em]">
+                                +1: {event.plus_one_eligible_roles.map(r => STAFF_ROLES.find(s => s.value === r)?.label || r).join(", ")}
                               </span>
                             )}
                           </div>
@@ -680,14 +809,58 @@ export default function EventsPage() {
                           </div>
                         )}
 
-                        <div className="border-t border-neutral-800 pt-4">
+                        <div className="border-t border-neutral-800 pt-4 flex flex-wrap gap-3 items-center">
                           <button
                             onClick={() => handleSelectEvent(event)}
                             className="px-4 py-2 text-xs tracking-[0.2em] uppercase text-emerald-400 border border-emerald-400/30 hover:border-emerald-400 hover:bg-emerald-400/5 transition-all duration-300 rounded"
                           >
                             Select as Current Event
                           </button>
+                          {adminUsername === "Admin" && (
+                            <button
+                              onClick={() => quotaEventId === event.id ? setQuotaEventId(null) : openQuotaManager(event.id)}
+                              className="px-4 py-2 text-xs tracking-[0.2em] uppercase text-amber-400 border border-amber-400/30 hover:border-amber-400 hover:bg-amber-400/5 transition-all duration-300 rounded"
+                            >
+                              {quotaEventId === event.id ? "Close Quotas" : "Manage Quotas"}
+                            </button>
+                          )}
                         </div>
+
+                        {/* Per-admin quota manager */}
+                        {quotaEventId === event.id && adminUsername === "Admin" && (
+                          <div className="mt-4 border border-amber-400/20 bg-amber-400/5 rounded p-4">
+                            <p className="text-xs tracking-[0.2em] uppercase text-amber-400 mb-1">Admin Friendlist Quotas</p>
+                            <p className="text-[10px] text-neutral-500 tracking-[0.1em] mb-4">
+                              Set how many manual friendlist codes each admin can generate for this event. Leave blank for unlimited.
+                            </p>
+                            <div className="space-y-3">
+                              {adminQuotas.map(q => (
+                                <div key={q.admin_id} className="flex items-center gap-4">
+                                  <span className="text-sm text-neutral-300 w-28 truncate">{q.username}</span>
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    value={quotaEdits[q.admin_id] ?? ""}
+                                    onChange={e => setQuotaEdits(prev => ({ ...prev, [q.admin_id]: e.target.value }))}
+                                    placeholder="Unlimited"
+                                    className="w-24 bg-transparent border-b border-neutral-700 px-0 py-1 text-white placeholder:text-neutral-600 focus:outline-none focus:border-amber-400 transition-all text-sm"
+                                  />
+                                  <span className="text-xs text-neutral-500">{q.codes_used} used</span>
+                                </div>
+                              ))}
+                            </div>
+                            <div className="flex items-center gap-3 mt-4">
+                              <button
+                                onClick={saveQuotas}
+                                disabled={quotaSaving}
+                                className="px-4 py-2 text-xs tracking-[0.2em] uppercase text-amber-400 border border-amber-400/30 hover:border-amber-400 hover:bg-amber-400/10 transition-all rounded disabled:opacity-50"
+                              >
+                                {quotaSaving ? "Saving..." : "Save Quotas"}
+                              </button>
+                              {quotaSuccess && <span className="text-xs text-emerald-400 tracking-[0.1em]">{quotaSuccess}</span>}
+                            </div>
+                          </div>
+                        )}
                       </>
                     )}
                   </div>

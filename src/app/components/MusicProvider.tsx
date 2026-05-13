@@ -59,7 +59,9 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
         console.log("Autoplay blocked or failed:", err)
         // Fallback: start playing on user interaction
         const handleInteraction = () => {
-          audioElement.play().catch(e => console.log("Play after interaction failed:", e))
+          audioElement.play().then(() => {
+            setIsPlaying(true)
+          }).catch(e => console.log("Play after interaction failed:", e))
           document.removeEventListener("click", handleInteraction)
           document.removeEventListener("touchstart", handleInteraction)
         }

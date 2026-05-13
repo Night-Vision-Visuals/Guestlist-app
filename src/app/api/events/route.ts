@@ -9,7 +9,8 @@
  *
  * Fields managed:
  *   name, event_date, description, guest_limit, poster_url,
- *   min_age (default 18), max_age (optional)
+ *   min_age (default 18), max_age (optional),
+ *   friendlist_total_limit (optional), plus_one_eligible_roles (optional text[])
  *
  * The DELETE method performs an extra username check (admin.username === "Admin")
  * in addition to the standard JWT auth, so only the designated super-admin
@@ -52,13 +53,13 @@ export async function POST(req: Request) {
     }
 
     const body = await req.json()
-    const { name, event_date, description, guest_limit, poster_url, min_age, max_age, entry_fee, friendlist_discount } = body
+    const { name, event_date, description, guest_limit, poster_url, min_age, max_age, entry_fee, friendlist_discount, friendlist_total_limit, plus_one_eligible_roles } = body
 
     if (!name || !event_date) {
       return NextResponse.json({ error: "Event name and date are required" }, { status: 400 })
     }
 
-    const insertData: Record<string, string | number | null> = {
+    const insertData: Record<string, string | number | boolean | null | string[]> = {
       name,
       event_date,
       description: description || null,
@@ -68,6 +69,8 @@ export async function POST(req: Request) {
       max_age: max_age ? parseInt(max_age) : null,
       entry_fee: entry_fee !== undefined && entry_fee !== "" ? parseFloat(entry_fee) : null,
       friendlist_discount: friendlist_discount !== undefined && friendlist_discount !== "" ? parseInt(friendlist_discount) : null,
+      friendlist_total_limit: friendlist_total_limit !== undefined && friendlist_total_limit !== "" ? parseInt(friendlist_total_limit) : null,
+      plus_one_eligible_roles: Array.isArray(plus_one_eligible_roles) && plus_one_eligible_roles.length > 0 ? plus_one_eligible_roles : null,
     }
 
     const { data: event, error } = await supabase
@@ -94,13 +97,13 @@ export async function PATCH(req: Request) {
     }
 
     const body = await req.json()
-    const { id, name, event_date, description, guest_limit, poster_url, min_age, max_age, entry_fee, friendlist_discount } = body
+    const { id, name, event_date, description, guest_limit, poster_url, min_age, max_age, entry_fee, friendlist_discount, friendlist_total_limit, plus_one_eligible_roles } = body
 
     if (!id) {
       return NextResponse.json({ error: "Event ID is required" }, { status: 400 })
     }
 
-    const updateData: Record<string, string | number | null> = {}
+    const updateData: Record<string, string | number | boolean | null | string[]> = {}
     if (name !== undefined) updateData.name = name
     if (event_date !== undefined) updateData.event_date = event_date
     if (description !== undefined) updateData.description = description || null
@@ -110,6 +113,8 @@ export async function PATCH(req: Request) {
     if (max_age !== undefined) updateData.max_age = max_age ? parseInt(max_age) : null
     if (entry_fee !== undefined) updateData.entry_fee = entry_fee !== "" ? parseFloat(entry_fee) : null
     if (friendlist_discount !== undefined) updateData.friendlist_discount = friendlist_discount !== "" ? parseInt(friendlist_discount) : null
+    if (friendlist_total_limit !== undefined) updateData.friendlist_total_limit = friendlist_total_limit !== "" ? parseInt(friendlist_total_limit) : null
+    if (plus_one_eligible_roles !== undefined) updateData.plus_one_eligible_roles = Array.isArray(plus_one_eligible_roles) && plus_one_eligible_roles.length > 0 ? plus_one_eligible_roles : null
 
     const { error } = await supabase
       .from("events")

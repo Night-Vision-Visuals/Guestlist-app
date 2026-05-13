@@ -13,13 +13,34 @@ export interface ApprovalEmailData {
   ticketUrl: string
   qrCodeDataUrl: string // base64 data URL from qrcode library
   entryPrice: number
+  plusOneCode?: string  // auto-generated +1 invite code for eligible crew members
 }
 
 export function renderApprovalEmail(data: ApprovalEmailData): string {
-  const { guestName, eventName, eventDate, ticketUrl, qrCodeDataUrl, entryPrice } = data
+  const { guestName, eventName, eventDate, ticketUrl, qrCodeDataUrl, entryPrice, plusOneCode } = data
   const entryFeeLabel = entryPrice === 0
     ? "Free"
     : `€${entryPrice % 1 === 0 ? entryPrice : entryPrice.toFixed(2)}`
+
+  const plusOneSection = plusOneCode ? `
+              <!-- +1 Code for crew -->
+              <table width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:32px;border:1px solid #2a1a3a;">
+                <tr>
+                  <td style="padding:20px 24px;background-color:#0d0a12;">
+                    <p style="margin:0 0 6px 0;font-size:9px;letter-spacing:0.25em;text-transform:uppercase;color:#7c4daa;">Your +1 Invite</p>
+                    <p style="margin:0 0 16px 0;font-size:13px;color:#cccccc;line-height:1.6;font-weight:300;">
+                      As a crew member you get one free entry for a friend.<br/>
+                      Share this code with them — it&rsquo;s single-use.
+                    </p>
+                    <div style="display:inline-block;padding:12px 24px;background-color:#1a0a2a;border:1px solid #5b2e8a;">
+                      <span style="font-size:22px;letter-spacing:0.35em;color:#c084fc;font-family:'Courier New',Courier,monospace;font-weight:600;">${plusOneCode}</span>
+                    </div>
+                    <p style="margin:12px 0 0 0;font-size:10px;letter-spacing:0.1em;color:#555555;">
+                      Your friend enters this code at registration.
+                    </p>
+                  </td>
+                </tr>
+              </table>` : ""
 
   return `<!DOCTYPE html>
 <html lang="de">
@@ -112,6 +133,14 @@ export function renderApprovalEmail(data: ApprovalEmailData): string {
               </p>
             </td>
           </tr>
+
+          ${plusOneSection ? `
+          <!-- +1 Code section -->
+          <tr>
+            <td style="padding:0 40px 32px 40px;">
+              ${plusOneSection}
+            </td>
+          </tr>` : ""}
 
           <!-- Footer -->
           <tr>

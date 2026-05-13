@@ -12,7 +12,7 @@ export default async function TicketPage({ params }: TicketPageProps) {
   // Fetch application by QR token
   const { data: application, error } = await supabase
     .from("applications")
-    .select("id, first_name, last_name, email, status, qr_token, event_id, checked_in, checked_in_at, role, invite_type, invitation_code_id")
+    .select("id, first_name, last_name, email, status, qr_token, event_id, checked_in, checked_in_at, role, invite_type, invitation_code_id, ticket_generated_at")
     .eq("qr_token", token)
     .single()
 
@@ -20,7 +20,8 @@ export default async function TicketPage({ params }: TicketPageProps) {
     notFound()
   }
 
-  if (application.status !== "approved") {
+  // Allow cancelled guests to see the cancellation screen
+  if (application.status !== "approved" && application.status !== "cancelled") {
     return (
       <div className="min-h-screen bg-black text-white flex items-center justify-center px-6">
         <div className="text-center space-y-4">
@@ -69,5 +70,5 @@ export default async function TicketPage({ params }: TicketPageProps) {
     }
   }
 
-  return <QRTicket application={application} token={token} entryPrice={entryPrice} />
+  return <QRTicket application={application} token={token} entryPrice={entryPrice} ticketGeneratedAt={application.ticket_generated_at ?? null} />
 }
