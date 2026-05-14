@@ -400,7 +400,7 @@ export default function LoginPage() {
   // ─── Render ─────────────────────────────────────────────────────────────────
 
   return (
-    <div className="min-h-screen bg-black text-white overflow-hidden">
+    <div className="min-h-screen bg-black text-white overflow-hidden flex flex-col">
       {/* Background */}
       <div className="fixed inset-0 z-0">
         {/* Video — only visible on code step */}
@@ -459,14 +459,9 @@ export default function LoginPage() {
       {/* Navigation */}
       <nav className="fixed top-0 left-0 right-0 z-50 flex justify-between items-center px-6 md:px-16 py-4 border-b border-orange-900/50 backdrop-blur-sm bg-black/60">
         <div className="flex items-center gap-3">
-          <Image
-            src="/logo.png"
-            alt="Night Vision"
-            width={32}
-            height={32}
-            className="h-8 w-8 object-contain"
-          />
-          <div className="h-px w-12 bg-gradient-to-r from-white to-transparent" />
+          <span style={{ fontFamily: "Futures, sans-serif" }} className="text-sm tracking-[0.15em] uppercase text-white">
+            Night Vision
+          </span>
         </div>
         <div className="flex items-center gap-6">
           <a
@@ -487,7 +482,7 @@ export default function LoginPage() {
       </nav>
 
       {/* Content */}
-      <div className="relative z-10 min-h-screen flex flex-col justify-between px-6 md:px-16 py-20">
+      <div className="relative z-10 flex-1 flex flex-col px-6 md:px-16 py-20">
 
         {/* Main Content */}
         <div className="flex items-center justify-center flex-1 py-12">
@@ -537,7 +532,7 @@ export default function LoginPage() {
 
             {/* ── STEP: CODE ── */}
             {step === "code" && (
-              <div className="w-full max-w-md mx-auto bg-black/60 backdrop-blur-md border border-orange-900/60 rounded-lg px-12 py-14 flex flex-col items-center text-center space-y-8">
+              <div className="w-full max-w-md mx-auto bg-black/60 backdrop-blur-md border border-orange-900/60 rounded-lg px-4 sm:px-12 py-14 flex flex-col items-center text-center space-y-8">
 
                 {/* Headline */}
                 <div className="space-y-3">
@@ -570,7 +565,7 @@ export default function LoginPage() {
                         onKeyDown={(e) => handleKeyDown(index, e)}
                         onPaste={handlePaste}
                         disabled={isLoading}
-                        className={`w-14 h-14 text-white text-center text-xl font-light rounded border focus:outline-none transition-all duration-500 backdrop-blur-sm ${
+                        className={`w-10 h-10 sm:w-14 sm:h-14 text-white text-center text-base sm:text-xl font-light rounded border focus:outline-none transition-all duration-500 backdrop-blur-sm ${
                           digit
                             ? "bg-white/15 border-white/50 shadow-[0_0_20px_rgba(255,255,255,0.05)]"
                             : "bg-white/8 border-white/20 hover:bg-white/12 hover:border-white/30"
@@ -1069,13 +1064,14 @@ export default function LoginPage() {
           </div>
         </div>
 
-        {/* Footer */}
-        <div className="flex justify-between items-end">
-          <div className="text-[10px] tracking-[0.3em] uppercase text-neutral-700 font-light">Invitation Only</div>
-          <div className="text-[10px] tracking-[0.3em] uppercase text-neutral-700 font-light">© 2026</div>
-        </div>
-
       </div>
+
+      {/* Footer */}
+      <div className="relative z-10 flex justify-between items-center border-t border-orange-900/40 backdrop-blur-sm bg-black/60 px-6 md:px-16 py-6">
+        <div className="text-[10px] tracking-[0.3em] uppercase text-neutral-700 font-light">Invitation Only</div>
+        <div className="text-[10px] tracking-[0.3em] uppercase text-neutral-700 font-light">© 2026</div>
+      </div>
+
     </div>
   )
 }

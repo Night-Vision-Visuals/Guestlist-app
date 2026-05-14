@@ -105,9 +105,9 @@ export default function QRTicket({ application, token, entryPrice, ticketGenerat
       <div className="relative z-10 min-h-screen flex flex-col items-center justify-center px-6 py-16">
         {/* Header */}
         <div className="text-center mb-12 space-y-2">
-          <div className="text-xs tracking-[0.4em] uppercase text-neutral-500 font-light mb-4">
-            Night Vision
-          </div>
+            <div className="text-xs tracking-[0.4em] uppercase text-neutral-500 font-light mb-4">
+              <span style={{ fontFamily: "Futures, sans-serif" }}>Night Vision</span>
+            </div>
           <h1 className="text-5xl font-light tracking-tight">
             <span className="bg-gradient-to-b from-white via-white to-neutral-500 bg-clip-text text-transparent">
               {isCancelled ? "Cancelled" : "Your Ticket"}
@@ -125,7 +125,7 @@ export default function QRTicket({ application, token, entryPrice, ticketGenerat
               </div>
               <p className="text-white font-light text-lg">Spot Cancelled</p>
               <p className="text-neutral-500 text-sm leading-relaxed">
-                Your spot for this event has been cancelled. We hope to see you at a future Night Vision event.
+                Your spot for this event has been cancelled. We hope to see you at a future <span style={{ fontFamily: "Futures, sans-serif" }}>Night Vision</span> event.
               </p>
             </div>
           </div>
@@ -274,7 +274,7 @@ export default function QRTicket({ application, token, entryPrice, ticketGenerat
         {/* Footer */}
         <div className="mt-12 text-center space-y-2">
           <p className="text-[10px] tracking-[0.3em] uppercase text-neutral-700">
-            Night Vision Visuals — Vienna
+            <span style={{ fontFamily: "Futures, sans-serif" }}>Night Vision</span> Visuals — Vienna
           </p>
         </div>
       </div>

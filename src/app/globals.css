@@ -3,6 +3,14 @@
 @tailwind components;
 @tailwind utilities;
 
+@font-face {
+  font-family: "Futures";
+  src: url("/fonts/Futures.otf") format("opentype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
 @variant hover (&:hover);
 
 :root {
@@ -24,12 +32,12 @@ body {
   font-family: var(--font-body), "DM Mono", monospace;
 }
 
-/* ── Arcade headings (h1) ───────────────────────────────────────────────────
-   Press Start 2P is a single-weight pixel font.
+/* ── Futures headings (h1) ──────────────────────────────────────────────────
+   Futures is the display font for all h1 headings.
    All h1s are forced ALL CAPS and clamped so they never overflow on mobile.
    Add class "no-arcade" to any h1 to opt out.                               */
 h1:not(.no-arcade) {
-  font-family: var(--font-arcade), "Press Start 2P", monospace;
+  font-family: "Futures", sans-serif;
   font-weight: 400 !important;
   text-transform: uppercase;
   letter-spacing: 0.04em !important;
@@ -41,9 +49,9 @@ h1:not(.no-arcade) {
     0 0 40px rgba(255, 255, 255, 0.12);
 }
 
-/* Standalone utility for arcade style on any element */
+/* Standalone utility for Futures style on any element */
 .arcade {
-  font-family: var(--font-arcade), "Press Start 2P", monospace;
+  font-family: "Futures", sans-serif;
   text-transform: uppercase;
   text-shadow:
     0 0 6px  rgba(255, 255, 255, 0.60),

@@ -1,16 +1,8 @@
 import type { Metadata } from "next"
-import { Press_Start_2P, DM_Mono } from "next/font/google"
+import { DM_Mono } from "next/font/google"
 import "./globals.css"
 import { MusicProvider } from "@/app/components/MusicProvider"
 import { MusicToggle } from "@/app/components/MusicToggle"
-
-// Arcade pixel font — all h1 headings, all caps + glow
-const pressStart2P = Press_Start_2P({
-  weight: "400",
-  variable: "--font-arcade",
-  subsets: ["latin"],
-  display: "swap",
-})
 
 // Body font — DM Mono (clean monospace, Punto-adjacent)
 const dmMono = DM_Mono({
@@ -34,7 +26,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${pressStart2P.variable} ${dmMono.variable} antialiased bg-black text-white`}
+        className={`${dmMono.variable} antialiased bg-black text-white`}
       >
         <MusicProvider>
           {children}

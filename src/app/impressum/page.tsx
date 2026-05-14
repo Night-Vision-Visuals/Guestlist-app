@@ -14,14 +14,9 @@ export default function ImpressumPage() {
       {/* Nav Header */}
       <nav className="fixed top-0 left-0 right-0 z-50 flex justify-between items-center px-6 md:px-16 py-4 border-b border-orange-900/50 backdrop-blur-sm bg-black/60">
         <div className="flex items-center gap-3">
-          <Image
-            src="/logo.png"
-            alt="Night Vision"
-            width={32}
-            height={32}
-            className="h-8 w-8 object-contain"
-          />
-          <div className="h-px w-12 bg-gradient-to-r from-white to-transparent" />
+          <span style={{ fontFamily: "Futures, sans-serif" }} className="text-sm tracking-[0.15em] uppercase text-white">
+            Night Vision
+          </span>
         </div>
         <Link
           href="/"
@@ -37,7 +32,7 @@ export default function ImpressumPage() {
         <div className="max-w-3xl mx-auto w-full flex-1">
           {/* Header */}
           <div className="mb-12 space-y-4">
-            <h1 className="no-arcade text-5xl md:text-7xl font-light tracking-tight">
+            <h1 className="text-5xl md:text-7xl font-light tracking-tight">
               <span className="bg-gradient-to-b from-white via-white to-neutral-500 bg-clip-text text-transparent">
                 Impressum
               </span>
@@ -118,7 +113,7 @@ export default function ImpressumPage() {
             <div className="h-px bg-gradient-to-r from-neutral-800 via-neutral-800 to-transparent" />
 
             <p className="text-[11px] tracking-[0.15em] uppercase text-neutral-600">
-              Stand: {new Date().getFullYear()} — Night Vision Visuals, Wien
+              Stand: {new Date().getFullYear()} — <span style={{ fontFamily: "Futures, sans-serif" }}>Night Vision</span> Visuals, Wien
             </p>
           </div>
         </div>
@@ -126,7 +121,7 @@ export default function ImpressumPage() {
         {/* Footer */}
         <div className="flex justify-between items-center mt-16 pt-8 border-t border-orange-900">
           <div className="text-[10px] tracking-[0.3em] uppercase text-neutral-700 font-light">
-            Night Vision Visuals
+            <span style={{ fontFamily: "Futures, sans-serif" }}>Night Vision</span> Visuals
           </div>
           <div className="text-[10px] tracking-[0.3em] uppercase text-neutral-700 font-light">
             © 2026
