@@ -32,29 +32,8 @@ body {
   font-family: var(--font-body), "DM Mono", monospace;
 }
 
-/* ── Futures headings (h1) ──────────────────────────────────────────────────
-   Futures is the display font for all h1 headings.
-   All h1s are forced ALL CAPS and clamped so they never overflow on mobile.
-   Add class "no-arcade" to any h1 to opt out.                               */
-h1:not(.no-arcade) {
-  font-family: "Futures", sans-serif;
-  font-weight: 400 !important;
-  text-transform: uppercase;
-  letter-spacing: 0.04em !important;
-  font-size: clamp(1rem, 3vw, 2rem) !important;
-  line-height: 1.55 !important;
-  text-shadow:
-    0 0 6px  rgba(255, 255, 255, 0.60),
-    0 0 18px rgba(255, 255, 255, 0.28),
-    0 0 40px rgba(255, 255, 255, 0.12);
-}
-
 /* Standalone utility for Futures style on any element */
 .arcade {
   font-family: "Futures", sans-serif;
   text-transform: uppercase;
-  text-shadow:
-    0 0 6px  rgba(255, 255, 255, 0.60),
-    0 0 18px rgba(255, 255, 255, 0.28),
-    0 0 40px rgba(255, 255, 255, 0.12);
 }

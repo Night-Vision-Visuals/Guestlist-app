@@ -155,6 +155,14 @@ export default function LandingPage() {
         {/* Navigation */}
         <nav className="fixed top-0 left-0 right-0 z-50 flex justify-between items-center px-6 md:px-16 py-4 border-b border-orange-900/50 backdrop-blur-sm bg-black/60">
           <div className="flex items-center gap-3">
+            <Image
+              src="/logo.png"
+              alt="Night Vision"
+              width={32}
+              height={32}
+              className="h-8 w-8 object-contain"
+            />
+            <div className="h-px w-12 bg-gradient-to-r from-white to-transparent" />
             <span style={{ fontFamily: "Futures, sans-serif" }} className="text-sm tracking-[0.15em] uppercase text-white">
               Night Vision
             </span>
@@ -184,9 +192,13 @@ export default function LandingPage() {
         <div className="min-h-screen flex flex-col justify-center items-center px-6 md:px-16 py-20 text-center">
           {/* Main Heading */}
           <div className="space-y-6 mb-12">
-            <h1 style={{ fontFamily: "Futures, sans-serif" }} className="text-6xl md:text-8xl tracking-[0.1em] uppercase text-white">
-              Night Vision
-            </h1>
+            <Image
+              src="/logo.png"
+              alt="Night Vision"
+              width={500}
+              height={500}
+              className="h-100 w-100 object-contain mx-auto mb-6"
+            />
             <p className="text-neutral-400 text-lg tracking-[0.2em] uppercase font-light max-w-2xl mx-auto">
               Liberate Your Mind. Acquire New Consciousness.
             </p>
@@ -325,7 +337,7 @@ export default function LandingPage() {
           {/* Copyright */}
           <div className="border-t border-orange-900/50 mt-12 pt-8 text-center">
             <p className="text-[10px] tracking-[0.3em] uppercase text-neutral-700 font-light">
-              © 2026 <span style={{ fontFamily: "Futures, sans-serif" }}>Night Vision</span>. All rights reserved.
+              © 2026 Night Vision. All rights reserved.
             </p>
           </div>
         </div>

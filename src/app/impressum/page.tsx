@@ -1,5 +1,4 @@
 import Link from "next/link"
-import Image from "next/image"
 
 export default function ImpressumPage() {
   return (
@@ -32,7 +31,7 @@ export default function ImpressumPage() {
         <div className="max-w-3xl mx-auto w-full flex-1">
           {/* Header */}
           <div className="mb-12 space-y-4">
-            <h1 className="text-5xl md:text-7xl font-light tracking-tight">
+            <h1 className="text-5xl md:text-7xl font-light tracking-tight" style={{ fontFamily: "Futures, sans-serif" }}>
               <span className="bg-gradient-to-b from-white via-white to-neutral-500 bg-clip-text text-transparent">
                 Impressum
               </span>

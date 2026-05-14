@@ -64,7 +64,7 @@ export default function CrewTicket({ application, token, eventName, eventDate }:
         {/* Top label */}
         <div className="text-center mb-10 space-y-3">
           <p className="text-[10px] tracking-[0.5em] uppercase text-neutral-600 font-light">
-            <span style={{ fontFamily: "Futures, sans-serif" }}>Night Vision</span>
+            Night Vision
           </p>
           <h1 className="text-4xl font-extralight tracking-tight text-white">
             Crew Access
@@ -142,7 +142,7 @@ export default function CrewTicket({ application, token, eventName, eventDate }:
         {/* Footer */}
         <div className="mt-12 text-center">
           <p className="text-[10px] tracking-[0.3em] uppercase text-neutral-800">
-            <span style={{ fontFamily: "Futures, sans-serif" }}>Night Vision</span> Visuals — Vienna
+            Night Vision Visuals — Vienna
           </p>
         </div>
 

@@ -117,7 +117,7 @@ export default function Sidebar() {
         {/* Logo Section */}
         <div className="p-6 border-b border-neutral-800">
           <div className="space-y-2">
-            <div className="text-xs tracking-[0.3em] uppercase text-neutral-500 font-light">
+            <div className="text-xs tracking-[0.3em] uppercase text-neutral-500 font-light" style={{ fontFamily: "Futures, sans-serif" }}>
               NIGHT VISION
             </div>
             <div className="h-px w-12 bg-gradient-to-r from-white to-transparent" />

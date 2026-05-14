@@ -358,7 +358,7 @@ function StaffPageInner() {
         {/* Top nav */}
         <div className="flex justify-between items-center">
           <div className="space-y-1">
-            <div className="text-xs tracking-[0.3em] uppercase text-neutral-500 font-light"><span style={{ fontFamily: "Futures, sans-serif" }}>Night Vision</span></div>
+            <div className="text-xs tracking-[0.3em] uppercase text-neutral-500 font-light">Night Vision</div>
             <div className="h-px w-12 bg-gradient-to-r from-white to-transparent" />
           </div>
           <div className="text-xs tracking-[0.3em] uppercase text-yellow-400/60 font-light tracking-widest">Staff</div>

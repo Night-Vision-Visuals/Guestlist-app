@@ -536,7 +536,7 @@ export default function LoginPage() {
 
                 {/* Headline */}
                 <div className="space-y-3">
-                  <h1 className="text-[10rem] font-light tracking-[0.15em] leading-none">
+                  <h1 className="text-5xl md:text-6xl font-light tracking-[0.15em] leading-none" style={{ fontFamily: "Futures, sans-serif" }}>
                     <span className="bg-gradient-to-b from-white via-white to-neutral-500 bg-clip-text text-transparent">
                       ACCESS
                     </span>
