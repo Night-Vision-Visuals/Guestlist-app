@@ -3,6 +3,8 @@
 @tailwind components;
 @tailwind utilities;
 
+@variant hover (&:hover);
+
 :root {
   --background: #0a0a0a;
   --foreground: #ededed;

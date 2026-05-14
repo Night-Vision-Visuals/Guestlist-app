@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react"
 import Link from "next/link"
+import Image from "next/image"
 import ReactMarkdown from "react-markdown"
 
 // ─── BirthDatePicker ──────────────────────────────────────────────────────────
@@ -77,9 +78,9 @@ function BirthDatePicker({
   const yearList = Array.from({ length: 12 }, (_, i) => yearStart + i).filter(y => y <= maxYear)
 
   return (
-    <div className="border border-neutral-800 bg-neutral-950 rounded-lg select-none w-full">
+    <div className="border border-orange-900 bg-neutral-950 rounded-lg select-none w-full">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 pt-4 pb-3 border-b border-neutral-800">
+      <div className="flex items-center justify-between px-4 pt-4 pb-3 border-b border-orange-900">
         <button type="button" onClick={prevMonth} className="p-1 text-neutral-500 hover:text-white transition-colors">
           ‹
         </button>
@@ -120,7 +121,7 @@ function BirthDatePicker({
               </button>
             ))}
           </div>
-          <div className="flex justify-between pt-1 border-t border-neutral-800">
+          <div className="flex justify-between pt-1 border-t border-orange-900">
             <button
               type="button"
               disabled={yearPage === 0}
@@ -194,7 +195,7 @@ function BirthDatePicker({
 
       {/* Selected value display */}
       {value && (
-        <div className="px-4 pb-3 pt-2 border-t border-neutral-800 text-center">
+        <div className="px-4 pb-3 pt-2 border-t border-orange-900 text-center">
           <span className="text-xs text-neutral-400 tracking-[0.1em]">
             {new Date(value + "T12:00:00").toLocaleDateString("en-GB", {
               weekday: "long", day: "numeric", month: "long", year: "numeric"
@@ -425,7 +426,7 @@ export default function LoginPage() {
       {showDeclineWarning && (
         <div className="fixed inset-0 z-50 flex items-center justify-center px-6">
           <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" />
-          <div className="relative z-10 w-full max-w-md border border-neutral-700 bg-neutral-950/95 p-10 space-y-8">
+          <div className="relative z-10 w-full max-w-md border border-orange-800 bg-neutral-950/95 p-10 space-y-8">
             <div className="space-y-3">
               <p className="text-xs tracking-[0.3em] uppercase text-red-400 font-light">Warning</p>
               <div className="h-px w-12 bg-gradient-to-r from-red-400/60 to-transparent" />
@@ -446,7 +447,7 @@ export default function LoginPage() {
               <button
                 onClick={() => setShowDeclineWarning(false)}
                 disabled={isDeclining}
-                className="w-full py-3 border border-neutral-800 text-neutral-400 hover:border-neutral-600 hover:text-white text-xs tracking-[0.25em] uppercase transition-all duration-300 disabled:opacity-50"
+                className="w-full py-3 border border-orange-900 text-neutral-400 hover:border-orange-700 hover:text-white text-xs tracking-[0.25em] uppercase transition-all duration-300 disabled:opacity-50"
               >
                 Go Back
               </button>
@@ -455,17 +456,38 @@ export default function LoginPage() {
         </div>
       )}
 
-      {/* Content */}
-      <div className="relative z-10 min-h-screen flex flex-col justify-between px-6 md:px-16 py-12">
-
-        {/* Top Navigation */}
-        <div className="flex justify-between items-center">
-          <div className="space-y-1">
-            <div className="text-xs tracking-[0.3em] uppercase text-neutral-500 font-light">Night Vision</div>
-            <div className="h-px w-12 bg-gradient-to-r from-white to-transparent" />
-          </div>
-          <div className="text-xs tracking-[0.3em] uppercase text-neutral-500 font-light">Vienna</div>
+      {/* Navigation */}
+      <nav className="fixed top-0 left-0 right-0 z-50 flex justify-between items-center px-6 md:px-16 py-4 border-b border-orange-900/50 backdrop-blur-sm bg-black/60">
+        <div className="flex items-center gap-3">
+          <Image
+            src="/logo.png"
+            alt="Night Vision"
+            width={32}
+            height={32}
+            className="h-8 w-8 object-contain"
+          />
+          <div className="h-px w-12 bg-gradient-to-r from-white to-transparent" />
         </div>
+        <div className="flex items-center gap-6">
+          <a
+            href="https://instagram.com/nightvision_raw"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-xs tracking-[0.2em] uppercase text-neutral-500 hover:text-white transition-colors duration-300"
+          >
+            Follow
+          </a>
+          <Link
+            href="/admin"
+            className="text-xs tracking-[0.2em] uppercase text-neutral-500 hover:text-white transition-colors duration-300"
+          >
+            Login
+          </Link>
+        </div>
+      </nav>
+
+      {/* Content */}
+      <div className="relative z-10 min-h-screen flex flex-col justify-between px-6 md:px-16 py-20">
 
         {/* Main Content */}
         <div className="flex items-center justify-center flex-1 py-12">
@@ -515,7 +537,7 @@ export default function LoginPage() {
 
             {/* ── STEP: CODE ── */}
             {step === "code" && (
-              <div className="w-full max-w-md mx-auto bg-neutral-900/50 backdrop-blur-md border border-neutral-800/60 rounded-lg px-12 py-14 flex flex-col items-center text-center space-y-8">
+              <div className="w-full max-w-md mx-auto bg-black/60 backdrop-blur-md border border-orange-900/60 rounded-lg px-12 py-14 flex flex-col items-center text-center space-y-8">
 
                 {/* Headline */}
                 <div className="space-y-3">
@@ -587,7 +609,7 @@ export default function LoginPage() {
                 <div className="space-y-6">
                   {/* Poster */}
                   {eventData?.poster_url && (
-                    <div className="w-full aspect-video overflow-hidden border border-neutral-800">
+                    <div className="w-full aspect-video overflow-hidden border border-orange-900">
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         src={eventData.poster_url}
@@ -639,7 +661,7 @@ export default function LoginPage() {
 
                   {/* Description */}
                   {eventData?.description && (
-                    <div className="border border-neutral-800 bg-neutral-950/40 backdrop-blur-sm rounded-xl p-6 space-y-4">
+                    <div className="border border-orange-900 bg-neutral-950/40 backdrop-blur-sm rounded-xl p-6 space-y-4">
                       <ReactMarkdown
                         components={{
                           p: ({ children }) => (
@@ -697,7 +719,7 @@ export default function LoginPage() {
                             className={`px-10 py-3 text-sm tracking-[0.25em] uppercase border transition-all duration-300 rounded ${
                               answers[i] === true
                                 ? "border-white text-white bg-white/5"
-                                : "border-neutral-700 text-neutral-500 hover:border-neutral-500 hover:text-neutral-300"
+                                : "border-orange-800 text-neutral-500 hover:border-orange-600 hover:text-neutral-300"
                             }`}
                           >
                             Yes
@@ -707,7 +729,7 @@ export default function LoginPage() {
                             className={`px-10 py-3 text-sm tracking-[0.25em] uppercase border transition-all duration-300 rounded ${
                               answers[i] === false
                                 ? "border-red-400/70 text-red-400 bg-red-400/5"
-                                : "border-neutral-700 text-neutral-500 hover:border-neutral-500 hover:text-neutral-300"
+                                : "border-orange-800 text-neutral-500 hover:border-orange-600 hover:text-neutral-300"
                             }`}
                           >
                             No
@@ -750,7 +772,7 @@ export default function LoginPage() {
                      {/* NO */}
                      <button
                        onClick={() => setShowDeclineWarning(true)}
-                       className="w-full py-4 border border-neutral-700 text-neutral-500 hover:border-red-400/40 hover:text-red-400 text-sm tracking-[0.25em] uppercase transition-all duration-300 rounded"
+                       className="w-full py-4 border border-orange-800 text-neutral-500 hover:border-red-400/40 hover:text-red-400 text-sm tracking-[0.25em] uppercase transition-all duration-300 rounded"
                      >
                        No, Decline
                      </button>
@@ -800,7 +822,7 @@ export default function LoginPage() {
                         className={`w-full bg-transparent text-white placeholder:text-neutral-600 border-b-2 pb-4 focus:outline-none transition-all duration-500 ${
                           focused === "first_name"
                             ? "border-white shadow-[0_1px_0_0_rgba(255,255,255,0.3)]"
-                            : "border-neutral-800 hover:border-neutral-700"
+                            : "border-orange-900 hover:border-orange-800"
                         }`}
                       />
                       {focused === "first_name" && (
@@ -826,7 +848,7 @@ export default function LoginPage() {
                         className={`w-full bg-transparent text-white placeholder:text-neutral-600 border-b-2 pb-4 focus:outline-none transition-all duration-500 ${
                           focused === "last_name"
                             ? "border-white shadow-[0_1px_0_0_rgba(255,255,255,0.3)]"
-                            : "border-neutral-800 hover:border-neutral-700"
+                            : "border-orange-900 hover:border-orange-800"
                         }`}
                       />
                       {focused === "last_name" && (
@@ -850,7 +872,7 @@ export default function LoginPage() {
                         className={`w-full bg-transparent text-white border-b-2 pb-4 focus:outline-none transition-all duration-500 appearance-none cursor-pointer ${
                           focused === "gender"
                             ? "border-white shadow-[0_1px_0_0_rgba(255,255,255,0.3)]"
-                            : "border-neutral-800 hover:border-neutral-700"
+                            : "border-orange-900 hover:border-orange-800"
                         } ${applicationData.gender === "" ? "text-neutral-600" : "text-white"}`}
                       >
                         <option value="" disabled className="bg-black text-neutral-600">Select gender</option>
@@ -892,7 +914,7 @@ export default function LoginPage() {
                         className={`w-full bg-transparent text-white placeholder:text-neutral-600 border-b-2 pb-4 focus:outline-none transition-all duration-500 ${
                           focused === "email"
                             ? "border-white shadow-[0_1px_0_0_rgba(255,255,255,0.3)]"
-                            : "border-neutral-800 hover:border-neutral-700"
+                            : "border-orange-900 hover:border-orange-800"
                         }`}
                       />
                       {focused === "email" && (
@@ -917,7 +939,7 @@ export default function LoginPage() {
                         className={`w-full bg-transparent text-white placeholder:text-neutral-600 border-b-2 pb-4 focus:outline-none transition-all duration-500 ${
                           focused === "instagram"
                             ? "border-white shadow-[0_1px_0_0_rgba(255,255,255,0.3)]"
-                            : "border-neutral-800 hover:border-neutral-700"
+                            : "border-orange-900 hover:border-orange-800"
                         }`}
                       />
                       {focused === "instagram" && (
@@ -941,7 +963,7 @@ export default function LoginPage() {
                         className={`w-full bg-transparent text-white border-b-2 pb-4 focus:outline-none transition-all duration-500 appearance-none cursor-pointer ${
                           focused === "heard_about_us"
                             ? "border-white shadow-[0_1px_0_0_rgba(255,255,255,0.3)]"
-                            : "border-neutral-800 hover:border-neutral-700"
+                            : "border-orange-900 hover:border-orange-800"
                         } ${applicationData.heard_about_us === "" ? "text-neutral-600" : "text-white"}`}
                       >
                         <option value="" disabled className="bg-black text-neutral-600">Select an option</option>
@@ -973,7 +995,7 @@ export default function LoginPage() {
                         className={`w-full bg-transparent text-white placeholder:text-neutral-600 border-b-2 pb-4 focus:outline-none transition-all duration-500 resize-none ${
                           focused === "intro"
                             ? "border-white shadow-[0_1px_0_0_rgba(255,255,255,0.3)]"
-                            : "border-neutral-800 hover:border-neutral-700"
+                            : "border-orange-900 hover:border-orange-800"
                         }`}
                       />
                       {focused === "intro" && (
@@ -999,7 +1021,7 @@ export default function LoginPage() {
                         <div className={`w-4 h-4 border transition-all duration-300 flex items-center justify-center ${
                           applicationData.datenschutz_accepted
                             ? "border-white bg-white"
-                            : "border-neutral-600 group-hover:border-neutral-400"
+                            : "border-orange-700 group-hover:border-neutral-400"
                         }`}>
                           {applicationData.datenschutz_accepted && (
                             <svg className="w-2.5 h-2.5 text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>

@@ -35,15 +35,17 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
       console.log("Audio loading started")
     }
     
+    // Sync React state whenever audio actually starts or stops playing
+    audioElement.onplay = () => setIsPlaying(true)
+    audioElement.onpause = () => setIsPlaying(false)
+
     audioElement.oncanplay = () => {
       console.log("Audio can play")
       audioElement.play().catch((err) => {
         console.log("Autoplay blocked or failed:", err)
         // Fallback: start playing on user interaction
         const handleInteraction = () => {
-          audioElement.play().then(() => {
-            setIsPlaying(true)
-          }).catch(e => console.log("Play after interaction failed:", e))
+          audioElement.play().catch(e => console.log("Play after interaction failed:", e))
           document.removeEventListener("click", handleInteraction)
           document.removeEventListener("touchstart", handleInteraction)
         }

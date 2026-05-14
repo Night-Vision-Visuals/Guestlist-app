@@ -15,9 +15,9 @@
  */
 
 import { Resend } from "resend"
-import QRCode from "qrcode"
 import { supabase } from "@/lib/supabase"
 import { renderApprovalEmail } from "@/lib/emails/ApprovalEmail"
+import { renderStaffApprovalEmail } from "@/lib/emails/StaffApprovalEmail"
 import { renderRejectionEmail } from "@/lib/emails/RejectionEmail"
 
 export interface SendResult {
@@ -72,12 +72,11 @@ function formatEventDate(dateStr: string): string {
   }
 }
 
-async function generateQrDataUrl(ticketUrl: string): Promise<string> {
-  return QRCode.toDataURL(ticketUrl, {
-    width: 400,
-    margin: 2,
-    color: { dark: "#FFFFFF", light: "#000000" },
-  })
+function formatRole(role: string): string {
+  return role
+    .split("_")
+    .map(w => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(" ")
 }
 
 async function calcEntryPrice(app: ApplicationRow, event: EventRow): Promise<number> {
@@ -123,19 +122,37 @@ async function sendEmailForApplication(
       throw new Error(`Approved guest ${app.id} has no qr_token`)
     }
     const ticketUrl = `${appUrl}/ticket/${app.qr_token}`
-    const qrCodeDataUrl = await generateQrDataUrl(ticketUrl)
     const entryPrice = await calcEntryPrice(app, event)
 
-    html = renderApprovalEmail({
-      guestName,
-      eventName: event.name,
-      eventDate,
-      ticketUrl,
-      qrCodeDataUrl,
-      entryPrice,
-      plusOneCode,
-    })
-    subject = `You're on the list — ${event.name}`
+    const isStaff = app.role && app.role !== "guest"
+
+    // Ensure +1 code is available for staff (bulletproof: look up if not passed in)
+    let resolvedPlusOneCode = plusOneCode
+    if (isStaff && !resolvedPlusOneCode) {
+      resolvedPlusOneCode = (await lookupPlusOneCode(app.id)) ?? undefined
+    }
+
+    if (isStaff) {
+      html = renderStaffApprovalEmail({
+        staffName: guestName,
+        eventName: event.name,
+        eventDate,
+        role: formatRole(app.role!),
+        ticketUrl,
+        plusOneCode: resolvedPlusOneCode,
+      })
+      subject = `You're on the crew — ${event.name}`
+    } else {
+      html = renderApprovalEmail({
+        guestName,
+        eventName: event.name,
+        eventDate,
+        ticketUrl,
+        entryPrice,
+        plusOneCode: resolvedPlusOneCode,
+      })
+      subject = `You're on the list — ${event.name}`
+    }
   } else if (app.status === "rejected") {
     html = renderRejectionEmail({
       guestName,
@@ -171,6 +188,42 @@ async function sendEmailForApplication(
 /**
  * Send emails to all unsent approved/rejected guests for a given event.
  */
+/**
+ * Look up the active (non-revoked) staff +1 invite code for a given application.
+ * Returns the code_hash string, or null if none exists / it was revoked.
+ */
+async function lookupPlusOneCode(applicationId: string): Promise<string | null> {
+  const { data } = await supabase
+    .from("invite_codes")
+    .select("code_hash")
+    .eq("linked_staff_application_id", applicationId)
+    .eq("is_staff_plus_one", true)
+    .is("revoked_at", null)
+    .single()
+  return data?.code_hash ?? null
+}
+
+/**
+ * Look up active staff +1 codes for multiple applications at once.
+ * Returns a map of applicationId → code_hash (only includes entries that exist).
+ */
+async function lookupPlusOneCodesBulk(applicationIds: string[]): Promise<Map<string, string>> {
+  if (applicationIds.length === 0) return new Map()
+  const { data } = await supabase
+    .from("invite_codes")
+    .select("code_hash, linked_staff_application_id")
+    .in("linked_staff_application_id", applicationIds)
+    .eq("is_staff_plus_one", true)
+    .is("revoked_at", null)
+  const map = new Map<string, string>()
+  for (const row of data || []) {
+    if (row.linked_staff_application_id && row.code_hash) {
+      map.set(row.linked_staff_application_id, row.code_hash)
+    }
+  }
+  return map
+}
+
 export async function sendPendingEmails(eventId: string): Promise<SendResult> {
   const result: SendResult = { sent: 0, failed: 0, skipped: 0, errors: [] }
 
@@ -205,9 +258,16 @@ export async function sendPendingEmails(eventId: string): Promise<SendResult> {
 
   const resend = getResend()
 
+  // Bulk-fetch +1 codes for any staff members in this batch
+  const staffAppIds = (applications as ApplicationRow[])
+    .filter(a => a.role && a.role !== "guest")
+    .map(a => a.id)
+  const plusOneMap = await lookupPlusOneCodesBulk(staffAppIds)
+
   for (const app of applications) {
     try {
-      await sendEmailForApplication(resend, app as ApplicationRow, event as EventRow)
+      const plusOneCode = plusOneMap.get(app.id)
+      await sendEmailForApplication(resend, app as ApplicationRow, event as EventRow, plusOneCode)
       result.sent++
     } catch (err) {
       result.failed++
@@ -334,8 +394,13 @@ export async function resendEmailForApplication(applicationId: string): Promise<
 
   const resend = getResend()
 
+  // Look up +1 code if this is a staff member
+  const plusOneCode = (app.role && app.role !== "guest")
+    ? (await lookupPlusOneCode(app.id)) ?? undefined
+    : undefined
+
   try {
-    await sendEmailForApplication(resend, app as ApplicationRow, event as EventRow)
+    await sendEmailForApplication(resend, app as ApplicationRow, event as EventRow, plusOneCode)
     result.sent++
   } catch (err) {
     result.failed++

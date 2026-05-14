@@ -1,4 +1,5 @@
 import Link from "next/link"
+import Image from "next/image"
 
 export default function DatenschutzPage() {
   return (
@@ -10,29 +11,33 @@ export default function DatenschutzPage() {
         <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-white/5 rounded-full blur-3xl opacity-20 animate-pulse" />
       </div>
 
-      {/* Content */}
-      <div className="relative z-10 min-h-screen flex flex-col px-6 md:px-16 py-12">
-        {/* Top Navigation */}
-        <div className="flex justify-between items-center mb-16">
-          <div className="space-y-1">
-            <div className="text-xs tracking-[0.3em] uppercase text-neutral-500 font-light">
-              Night Vision
-            </div>
-            <div className="h-px w-12 bg-gradient-to-r from-white to-transparent" />
-          </div>
-          <Link
-            href="/login"
-            className="text-xs tracking-[0.3em] uppercase text-neutral-500 hover:text-white transition-colors duration-300"
-          >
-            ← Zurück
-          </Link>
+      {/* Nav Header */}
+      <nav className="fixed top-0 left-0 right-0 z-50 flex justify-between items-center px-6 md:px-16 py-4 border-b border-orange-900/50 backdrop-blur-sm bg-black/60">
+        <div className="flex items-center gap-3">
+          <Image
+            src="/logo.png"
+            alt="Night Vision"
+            width={32}
+            height={32}
+            className="h-8 w-8 object-contain"
+          />
+          <div className="h-px w-12 bg-gradient-to-r from-white to-transparent" />
         </div>
+        <Link
+          href="/"
+          className="text-xs tracking-[0.3em] uppercase text-neutral-500 hover:text-orange-400 transition-colors duration-300"
+        >
+          ← Back
+        </Link>
+      </nav>
 
+      {/* Content */}
+      <div className="relative z-10 min-h-screen flex flex-col px-6 md:px-16 pt-28 pb-12">
         {/* Main Content */}
         <div className="max-w-3xl mx-auto w-full flex-1">
           {/* Header */}
           <div className="mb-12 space-y-4">
-            <h1 className="text-5xl md:text-7xl font-light tracking-tight">
+            <h1 className="no-arcade text-5xl md:text-7xl font-light tracking-tight">
               <span className="bg-gradient-to-b from-white via-white to-neutral-500 bg-clip-text text-transparent">
                 Datenschutz
               </span>
@@ -47,17 +52,17 @@ export default function DatenschutzPage() {
           <div className="space-y-10 text-neutral-300 font-light leading-relaxed">
 
             <section>
-              <h2 className="text-xs tracking-[0.3em] uppercase text-neutral-500 mb-4">
+              <h2 className="no-arcade text-xs tracking-[0.3em] uppercase text-neutral-500 mb-4">
                 1. Verantwortlicher
               </h2>
               <p className="text-sm">
                 Verantwortlicher im Sinne der Datenschutzgrundverordnung (DSGVO) ist Night Vision Visuals.
-                Bei Fragen zum Datenschutz kannst du uns unter unserer Instagram-Seite kontaktieren.
+                Bei Fragen zum Datenschutz kannst du uns unter <a href="mailto:info@nightvision-events.com" className="hover:text-orange-400 transition-colors duration-300">info@nightvision-events.com</a> kontaktieren.
               </p>
             </section>
 
             <section>
-              <h2 className="text-xs tracking-[0.3em] uppercase text-neutral-500 mb-4">
+              <h2 className="no-arcade text-xs tracking-[0.3em] uppercase text-neutral-500 mb-4">
                 2. Erhobene Daten
               </h2>
               <p className="text-sm mb-3">
@@ -75,7 +80,7 @@ export default function DatenschutzPage() {
             </section>
 
             <section>
-              <h2 className="text-xs tracking-[0.3em] uppercase text-neutral-500 mb-4">
+              <h2 className="no-arcade text-xs tracking-[0.3em] uppercase text-neutral-500 mb-4">
                 3. Zweck der Datenverarbeitung
               </h2>
               <p className="text-sm">
@@ -87,7 +92,7 @@ export default function DatenschutzPage() {
             </section>
 
             <section>
-              <h2 className="text-xs tracking-[0.3em] uppercase text-neutral-500 mb-4">
+              <h2 className="no-arcade text-xs tracking-[0.3em] uppercase text-neutral-500 mb-4">
                 4. Speicherdauer
               </h2>
               <p className="text-sm">
@@ -98,7 +103,7 @@ export default function DatenschutzPage() {
             </section>
 
             <section>
-              <h2 className="text-xs tracking-[0.3em] uppercase text-neutral-500 mb-4">
+              <h2 className="no-arcade text-xs tracking-[0.3em] uppercase text-neutral-500 mb-4">
                 5. Deine Rechte
               </h2>
               <p className="text-sm mb-3">
@@ -113,12 +118,12 @@ export default function DatenschutzPage() {
                 <li>Recht auf Widerspruch gegen die Verarbeitung (Art. 21 DSGVO)</li>
               </ul>
               <p className="text-sm mt-3">
-                Zur Ausübung dieser Rechte wende dich bitte über unsere Instagram-Seite an uns.
+                Zur Ausübung dieser Rechte wende dich bitte an <a href="mailto:info@nightvision-events.com" className="hover:text-orange-400 transition-colors duration-300">info@nightvision-events.com</a>.
               </p>
             </section>
 
             <section>
-              <h2 className="text-xs tracking-[0.3em] uppercase text-neutral-500 mb-4">
+              <h2 className="no-arcade text-xs tracking-[0.3em] uppercase text-neutral-500 mb-4">
                 6. Datensicherheit
               </h2>
               <p className="text-sm">
@@ -129,7 +134,7 @@ export default function DatenschutzPage() {
             </section>
 
             <section>
-              <h2 className="text-xs tracking-[0.3em] uppercase text-neutral-500 mb-4">
+              <h2 className="no-arcade text-xs tracking-[0.3em] uppercase text-neutral-500 mb-4">
                 7. Einwilligung
               </h2>
               <p className="text-sm">
@@ -140,7 +145,7 @@ export default function DatenschutzPage() {
             </section>
 
             <section>
-              <h2 className="text-xs tracking-[0.3em] uppercase text-neutral-500 mb-4">
+              <h2 className="no-arcade text-xs tracking-[0.3em] uppercase text-neutral-500 mb-4">
                 8. Beschwerderecht
               </h2>
               <p className="text-sm">
@@ -158,7 +163,7 @@ export default function DatenschutzPage() {
         </div>
 
         {/* Footer */}
-        <div className="flex justify-between items-center mt-16 pt-8 border-t border-neutral-800">
+        <div className="flex justify-between items-center mt-16 pt-8 border-t border-orange-900">
           <div className="text-[10px] tracking-[0.3em] uppercase text-neutral-700 font-light">
             Night Vision Visuals
           </div>

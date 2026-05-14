@@ -1,9 +1,23 @@
 import { supabase } from "@/lib/supabase"
 import { notFound } from "next/navigation"
 import QRTicket from "./QRTicket"
+import CrewTicket from "./CrewTicket"
 
 interface TicketPageProps {
   params: Promise<{ token: string }>
+}
+
+function formatEventDate(dateStr: string): string {
+  try {
+    return new Date(dateStr.slice(0, 10) + "T12:00:00").toLocaleDateString("de-DE", {
+      weekday: "long",
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    })
+  } catch {
+    return dateStr
+  }
 }
 
 export default async function TicketPage({ params }: TicketPageProps) {
@@ -33,42 +47,70 @@ export default async function TicketPage({ params }: TicketPageProps) {
     )
   }
 
-  // Calculate entry price server-side
+  // Fetch event for name + date
+  let eventName = ""
+  let eventDate = ""
   let entryPrice = 0
+
   if (application.event_id) {
     const { data: event } = await supabase
       .from("events")
-      .select("entry_fee, friendlist_discount")
+      .select("name, event_date, entry_fee, friendlist_discount")
       .eq("id", application.event_id)
       .single()
 
-    if (event && event.entry_fee != null) {
-      const entryFee: number = event.entry_fee
-      const friendlistDiscount: number = event.friendlist_discount ?? 0
+    if (event) {
+      eventName = event.name ?? ""
+      eventDate = event.event_date ? formatEventDate(event.event_date) : ""
 
-      // Staff roles are always free
-      if (!application.role || application.role === "guest") {
-        let tier = application.invite_type ?? "guest"
+      if (event.entry_fee != null) {
+        const entryFee: number = event.entry_fee
+        const friendlistDiscount: number = event.friendlist_discount ?? 0
 
-        if (application.invitation_code_id) {
-          const { data: code } = await supabase
-            .from("invite_codes")
-            .select("tier, invite_type")
-            .eq("id", application.invitation_code_id)
-            .single()
-          if (code) tier = code.tier || code.invite_type || tier
-        }
+        // Staff roles are always free
+        if (!application.role || application.role === "guest") {
+          let tier = application.invite_type ?? "guest"
 
-        if (tier === "crew" || tier === "staff") {
-          entryPrice = 0
-        } else if (tier === "friendlist") {
-          entryPrice = Math.round(entryFee * (1 - friendlistDiscount / 100) * 100) / 100
-        } else {
-          entryPrice = entryFee
+          if (application.invitation_code_id) {
+            const { data: code } = await supabase
+              .from("invite_codes")
+              .select("tier, invite_type")
+              .eq("id", application.invitation_code_id)
+              .single()
+            if (code) tier = code.tier || code.invite_type || tier
+          }
+
+          if (tier === "crew" || tier === "staff") {
+            entryPrice = 0
+          } else if (tier === "friendlist") {
+            entryPrice = Math.round(entryFee * (1 - friendlistDiscount / 100) * 100) / 100
+          } else {
+            entryPrice = entryFee
+          }
         }
       }
     }
   }
 
-  return <QRTicket application={application} token={token} entryPrice={entryPrice} ticketGeneratedAt={application.ticket_generated_at ?? null} />
+  const isStaff = application.role && application.role !== "guest"
+
+  if (isStaff) {
+    return (
+      <CrewTicket
+        application={application}
+        token={token}
+        eventName={eventName}
+        eventDate={eventDate}
+      />
+    )
+  }
+
+  return (
+    <QRTicket
+      application={application}
+      token={token}
+      entryPrice={entryPrice}
+      ticketGeneratedAt={application.ticket_generated_at ?? null}
+    />
+  )
 }

@@ -153,7 +153,7 @@ export default function LandingPage() {
       {/* Content */}
       <div className="relative z-10">
         {/* Navigation */}
-        <nav className="fixed top-0 left-0 right-0 z-50 flex justify-between items-center px-6 md:px-16 py-4 border-b border-neutral-800/50 backdrop-blur-sm bg-black/60">
+        <nav className="fixed top-0 left-0 right-0 z-50 flex justify-between items-center px-6 md:px-16 py-4 border-b border-orange-900/50 backdrop-blur-sm bg-black/60">
           <div className="flex items-center gap-3">
             <Image
               src="/logo.png"
@@ -227,7 +227,7 @@ export default function LandingPage() {
 
           {/* Features Grid */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 w-full max-w-4xl">
-            <div className="group border border-neutral-800 p-8 rounded-lg hover:border-neutral-400/50 hover:bg-neutral-400/5 transition-all duration-300 backdrop-blur-sm">
+            <div className="group border border-orange-900 bg-black/60 p-8 rounded-lg hover:border-orange-700/50 hover:bg-black/80 transition-all duration-300 backdrop-blur-sm">
               <Volume2 size={24} className="text-neutral-400 mb-4 group-hover:scale-110 transition-transform duration-300" />
               <h3 className="text-lg font-light tracking-[0.15em] uppercase mb-2">
                 Sound
@@ -237,7 +237,7 @@ export default function LandingPage() {
               </p>
             </div>
 
-            <div className="group border border-neutral-800 p-8 rounded-lg hover:border-neutral-400/50 hover:bg-neutral-400/5 transition-all duration-300 backdrop-blur-sm">
+            <div className="group border border-orange-900 bg-black/60 p-8 rounded-lg hover:border-orange-700/50 hover:bg-black/80 transition-all duration-300 backdrop-blur-sm">
               <TrendingUp size={24} className="text-neutral-400 mb-4 group-hover:scale-110 transition-transform duration-300" />
               <h3 className="text-lg font-light tracking-[0.15em] uppercase mb-2">
                 Journey
@@ -247,7 +247,7 @@ export default function LandingPage() {
               </p>
             </div>
 
-            <div className="group border border-neutral-800 p-8 rounded-lg hover:border-neutral-400/50 hover:bg-neutral-400/5 transition-all duration-300 backdrop-blur-sm">
+            <div className="group border border-orange-900 bg-black/60 p-8 rounded-lg hover:border-orange-700/50 hover:bg-black/80 transition-all duration-300 backdrop-blur-sm">
               <Users size={24} className="text-neutral-400 mb-4 group-hover:scale-110 transition-transform duration-300" />
               <h3 className="text-lg font-light tracking-[0.15em] uppercase mb-2">
                 Space
@@ -260,11 +260,11 @@ export default function LandingPage() {
         </div>
 
         {/* Footer Section */}
-        <div className="border-t border-neutral-800/50 px-6 md:px-16 py-12 backdrop-blur-sm">
+        <div className="border-t border-orange-900/50 px-6 md:px-16 py-12 backdrop-blur-sm bg-black/60">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-12 max-w-5xl mx-auto">
             {/* About */}
             <div>
-              <h4 className="text-xs tracking-[0.3em] uppercase text-neutral-500 font-light mb-4">
+              <h4 className="text-xs tracking-[0.3em] uppercase text-orange-400 font-light mb-4">
                 About
               </h4>
               <p className="text-neutral-600 text-sm font-light leading-relaxed">
@@ -274,51 +274,65 @@ export default function LandingPage() {
 
             {/* Links */}
             <div>
-              <h4 className="text-xs tracking-[0.3em] uppercase text-neutral-500 font-light mb-4">
+              <h4 className="text-xs tracking-[0.3em] uppercase text-orange-400 font-light mb-4">
                 Quick Links
               </h4>
               <div className="space-y-2">
                 <Link
                   href="/apply"
-                  className="block text-neutral-600 hover:text-white text-sm font-light transition-colors duration-300"
+                  className="block text-neutral-600 hover:text-orange-400 text-sm font-light transition-colors duration-300"
                 >
                   Apply
                 </Link>
                 <Link
-                  href="/admin"
-                  className="block text-neutral-600 hover:text-white text-sm font-light transition-colors duration-300"
+                  href="/impressum"
+                  className="block text-neutral-600 hover:text-orange-400 text-sm font-light transition-colors duration-300"
                 >
-                  Admin
+                  Impressum
                 </Link>
-                <a
-                  href="https://instagram.com/nightvision_raw"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="block text-neutral-600 hover:text-white text-sm font-light transition-colors duration-300"
+                <Link
+                  href="/datenschutz"
+                  className="block text-neutral-600 hover:text-orange-400 text-sm font-light transition-colors duration-300"
                 >
-                  Instagram
-                </a>
+                  Datenschutz
+                </Link>
               </div>
             </div>
 
             {/* Contact */}
             <div>
-              <h4 className="text-xs tracking-[0.3em] uppercase text-neutral-500 font-light mb-4">
+              <h4 className="text-xs tracking-[0.3em] uppercase text-orange-400 font-light mb-4">
                 Connect
               </h4>
-              <a
-                href="https://instagram.com/nightvision_raw"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-neutral-600 hover:text-neutral-400 text-sm font-light transition-colors duration-300"
-              >
-                @nightvision_raw
-              </a>
+              <div className="space-y-2">
+                <a
+                  href="https://instagram.com/nightvision_raw"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block text-neutral-600 hover:text-orange-400 text-sm font-light transition-colors duration-300"
+                >
+                  Instagram
+                </a>
+                <a
+                  href="https://wa.me/message/XXXXXXXXXX"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block text-neutral-600 hover:text-orange-400 text-sm font-light transition-colors duration-300"
+                >
+                  WhatsApp
+                </a>
+                <a
+                  href="mailto:info@nightvision-events.com"
+                  className="block text-neutral-600 hover:text-orange-400 text-sm font-light transition-colors duration-300"
+                >
+                  Email
+                </a>
+              </div>
             </div>
           </div>
 
           {/* Copyright */}
-          <div className="border-t border-neutral-800/50 mt-12 pt-8 text-center">
+          <div className="border-t border-orange-900/50 mt-12 pt-8 text-center">
             <p className="text-[10px] tracking-[0.3em] uppercase text-neutral-700 font-light">
               © 2026 Night Vision. All rights reserved.
             </p>

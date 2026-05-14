@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from "react"
 import { useRouter } from "next/navigation"
 import { useEventContext } from "@/lib/EventContext"
-import { QrCode, Pencil, X, Check, LogIn, UserX, LayoutList, LayoutGrid, Mail, Send, Clock, CheckCheck, MailCheck, SlidersHorizontal, UserPlus, Download, Receipt } from "lucide-react"
+import { QrCode, Pencil, X, Check, LogIn, UserX, LayoutList, LayoutGrid, Mail, Send, Clock, CheckCheck, MailCheck, SlidersHorizontal, UserPlus, Download, Receipt, User } from "lucide-react"
 import * as XLSX from "xlsx"
 
 interface AdminRef {
@@ -1188,7 +1188,7 @@ export default function DashboardPage() {
                          key={app.id}
                          className={`border transition-all duration-300 ${
                            app.age_flagged
-                             ? "border-orange-800/60 hover:border-orange-700/60"
+                             ? "border-neutral-700/60 hover:border-neutral-600/60"
                              : "border-neutral-800 hover:border-neutral-700"
                          }`}
                        >
@@ -1202,42 +1202,36 @@ export default function DashboardPage() {
                              setExpandedGuestId(prev => prev === app.id ? null : app.id)
                            }}
                          >
-                           <div className="flex items-center gap-3 flex-wrap">
-                             {app.age_flagged && (
-                               <span className="text-[10px] px-2 py-0.5 rounded border text-orange-400 border-orange-400/30 bg-orange-400/10">
-                                 ⚠ Age
-                               </span>
-                             )}
-                             <span className="text-white font-light text-sm min-w-[140px]">{app.first_name} {app.last_name}</span>
-                             <span className="text-neutral-500 text-xs w-8 text-center">{calculateAge(app.date_of_birth)}y</span>
-                             <span className="text-neutral-500 text-xs capitalize min-w-[55px]">{app.gender || "—"}</span>
-                             <a href={`mailto:${app.email}`} className="text-neutral-400 hover:text-blue-400 text-xs transition-colors flex-1 min-w-[150px] truncate">{app.email}</a>
-                             {badge && app.invite_type === "friendlist" && (
-                               <span className={`text-[10px] px-2 py-0.5 rounded border tracking-[0.1em] font-mono ${badge.cls}`}>
-                                 {badge.label}
-                               </span>
-                             )}
-                             <span className={`text-[10px] px-2 py-0.5 rounded border tracking-[0.15em] uppercase font-light whitespace-nowrap ${getStatusBadge(app.status)}`}>
-                               {app.status}{app.checked_in ? " ✓" : ""}
-                             </span>
-                              {/* Mail + source icons grouped together */}
-                              <div className="flex items-center gap-1.5">
-                                {(app.status === "approved" || app.status === "rejected") && (
-                                  <span title={app.email_sent_at ? `Email sent ${new Date(app.email_sent_at).toLocaleString()}` : "Email not sent yet"}>
-                                    {app.email_sent_at
-                                      ? <Mail size={13} className="text-emerald-500 shrink-0" />
-                                      : <Mail size={13} className="text-neutral-700 shrink-0" />
-                                    }
-                                  </span>
-                                )}
-                                {app.added_by_admin
-                                  ? <span title={`Manually added by ${app.added_by_admin.username}`}><UserPlus size={13} className="text-neutral-500 shrink-0" /></span>
-                                  : app.invite_code_admin
-                                    ? <span title={`Registered via code — ${app.invite_code_admin.username}`}><QrCode size={13} className="text-neutral-500 shrink-0" /></span>
-                                    : null
-                                }
+                            <div className="flex items-center gap-3 flex-wrap">
+                              {app.age_flagged && (
+                                <span className="text-[10px] px-2 py-0.5 rounded border text-orange-400 border-orange-400/30 bg-orange-400/10">
+                                  ⚠ Age
+                                </span>
+                              )}
+                              {/* Avatar — placeholder icon, replace with real photo when available */}
+                              <div className={`h-8 w-8 rounded-sm shrink-0 flex items-center justify-center overflow-hidden border
+                                ${app.gender === "male" ? "bg-blue-950 border-blue-900" :
+                                  app.gender === "female" ? "bg-pink-950 border-pink-900" :
+                                  "bg-neutral-800 border-neutral-700"}`}>
+                                <User size={18} className={
+                                  app.gender === "male" ? "text-blue-400" :
+                                  app.gender === "female" ? "text-pink-400" :
+                                  "text-neutral-500"
+                                } />
                               </div>
-                              {/* Ticket action status — only shown when email was sent */}
+                              <span className="text-white font-light text-sm min-w-[140px]">{app.first_name} {app.last_name}</span>
+                              <span className="text-neutral-500 text-xs w-8 text-center">{calculateAge(app.date_of_birth)}y</span>
+                              <a href={`mailto:${app.email}`} className="text-neutral-400 hover:text-blue-400 text-xs transition-colors flex-1 min-w-[150px] truncate">{app.email}</a>
+                              {badge && app.invite_type === "friendlist" && (
+                                <span className={`text-[10px] px-2 py-0.5 rounded border tracking-[0.1em] font-mono ${badge.cls}`}>
+                                  {badge.label}
+                                </span>
+                              )}
+                              {/* Main status badge — without checked_in suffix */}
+                              <span className={`text-[10px] px-2 py-0.5 rounded border tracking-[0.15em] uppercase font-light whitespace-nowrap ${getStatusBadge(app.status)}`}>
+                                {app.status}
+                              </span>
+                              {/* Ticket sub-status badge — shown between status and icons */}
                               {app.email_sent_at && app.role === "guest" && (() => {
                                 if (app.status === "cancelled") {
                                   return (
@@ -1249,7 +1243,7 @@ export default function DashboardPage() {
                                 if (app.ticket_generated_at) {
                                   return (
                                     <span className="text-[10px] px-2 py-0.5 rounded border tracking-[0.1em] font-mono text-emerald-400 border-emerald-400/30 bg-emerald-400/10" title={`Ticket generated ${new Date(app.ticket_generated_at).toLocaleString()}`}>
-                                      Generated
+                                      Attending
                                     </span>
                                   )
                                 }
@@ -1262,6 +1256,29 @@ export default function DashboardPage() {
                                 }
                                 return null
                               })()}
+                              {/* Check-in icon — separate, before mail icon */}
+                              {app.checked_in && (
+                                <span title={app.checked_in_at ? `Checked in at ${new Date(app.checked_in_at).toLocaleTimeString()}` : "Checked in"}>
+                                  <CheckCheck size={13} className="text-emerald-400 shrink-0" />
+                                </span>
+                              )}
+                               {/* Mail + source icons */}
+                               <div className="flex items-center gap-1.5">
+                                 {(app.status === "approved" || app.status === "rejected") && (
+                                   <span title={app.email_sent_at ? `Email sent ${new Date(app.email_sent_at).toLocaleString()}` : "Email not sent yet"}>
+                                     {app.email_sent_at
+                                       ? <Mail size={13} className="text-emerald-500 shrink-0" />
+                                       : <Mail size={13} className="text-neutral-700 shrink-0" />
+                                     }
+                                   </span>
+                                 )}
+                                 {app.added_by_admin
+                                   ? <span title={`Manually added by ${app.added_by_admin.username}`}><UserPlus size={13} className="text-neutral-500 shrink-0" /></span>
+                                   : app.invite_code_admin
+                                     ? <span title={`Registered via code — ${app.invite_code_admin.username}`}><QrCode size={13} className="text-neutral-500 shrink-0" /></span>
+                                     : null
+                                 }
+                               </div>
                              <span className="text-neutral-600 text-xs hidden md:block">{new Date(app.created_at).toLocaleDateString()}</span>
                              <div className="flex items-center gap-1 ml-auto">
                               <button onClick={() => editingId === app.id ? setEditingId(null) : startEdit(app)} title="Edit" className="p-1.5 text-neutral-500 hover:text-white hover:bg-neutral-800 rounded transition-all">
@@ -1560,6 +1577,35 @@ export default function DashboardPage() {
                               className="p-1.5 text-neutral-600 hover:text-emerald-400 transition-colors">
                               <QrCode size={13} />
                             </a>
+                          )}
+
+                          {/* Resend email */}
+                          {person.status === "approved" && (
+                            <>
+                              <button
+                                onClick={() => handleResendEmail(person.id)}
+                                disabled={resendingEmailId === person.id}
+                                title={person.email_sent_at ? "Email sent — click to resend" : "Send approval email"}
+                                className={`p-1.5 rounded transition-all disabled:opacity-40 ${
+                                  resendingEmailId === person.id
+                                    ? "text-neutral-500"
+                                    : person.email_sent_at
+                                    ? "text-emerald-400 hover:text-emerald-300 hover:bg-emerald-400/10"
+                                    : "text-neutral-500 hover:text-sky-400 hover:bg-sky-400/10"
+                                }`}
+                              >
+                                {resendingEmailId === person.id
+                                  ? <Clock size={13} />
+                                  : person.email_sent_at
+                                  ? <MailCheck size={13} />
+                                  : <Mail size={13} />}
+                              </button>
+                              {resendResult?.id === person.id && (
+                                <span className={`text-[10px] tracking-[0.1em] ${resendResult.success ? "text-emerald-400" : "text-red-400"}`}>
+                                  {resendResult.message}
+                                </span>
+                              )}
+                            </>
                           )}
 
                           {/* Edit */}
