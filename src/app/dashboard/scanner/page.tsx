@@ -407,7 +407,7 @@ export default function ScannerPage() {
         <div className="px-6 md:px-16 py-12 max-w-2xl mx-auto">
           {/* Title */}
           <div className="mb-12 space-y-4">
-            <h1 className="text-5xl md:text-6xl font-light tracking-tight">
+            <h1 className="text-5xl md:text-6xl font-light tracking-tight" style={{ fontFamily: "Futures, sans-serif" }}>
               <span className="bg-gradient-to-b from-white via-white to-neutral-500 bg-clip-text text-transparent">
                 Scanner
               </span>

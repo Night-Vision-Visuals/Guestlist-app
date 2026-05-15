@@ -805,7 +805,7 @@ export default function DashboardPage() {
           <div className="mb-10 space-y-4">
             <div className="flex items-start justify-between flex-wrap gap-4">
               <div className="space-y-4">
-                <h1 className="text-5xl md:text-6xl font-light tracking-tight">
+                <h1 className="text-5xl md:text-6xl font-light tracking-tight" style={{ fontFamily: "Futures, sans-serif" }}>
                   <span className="bg-gradient-to-b from-white via-white to-neutral-500 bg-clip-text text-transparent">
                     Applications
                   </span>

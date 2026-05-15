@@ -430,7 +430,7 @@ export default function DJsPage() {
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-2xl font-light tracking-[0.2em] uppercase text-white">
+            <h1 className="text-2xl font-light tracking-[0.2em] uppercase text-white" style={{ fontFamily: "Futures, sans-serif" }}>
               DJ Management
             </h1>
             <p className="text-xs tracking-[0.2em] text-neutral-500 uppercase mt-1">
