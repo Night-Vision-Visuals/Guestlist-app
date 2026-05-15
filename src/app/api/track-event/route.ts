@@ -25,6 +25,28 @@ function parseUserAgent(ua: string): { device_type: string; os: string } {
   return { device_type, os }
 }
 
+async function lookupGeo(ip: string): Promise<{ country: string; city: string; lat: number | null; lng: number | null }> {
+  if (!ip || /^(127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|::1|localhost)/.test(ip)) {
+    return { country: "Local", city: "Local", lat: null, lng: null }
+  }
+  try {
+    const res = await fetch(`https://ip-api.com/json/${ip}?fields=country,city,lat,lon,status`, {
+      signal: AbortSignal.timeout(2000),
+    })
+    if (!res.ok) return { country: "Unknown", city: "Unknown", lat: null, lng: null }
+    const data = await res.json()
+    if (data.status !== "success") return { country: "Unknown", city: "Unknown", lat: null, lng: null }
+    return {
+      country: data.country || "Unknown",
+      city: data.city || "Unknown",
+      lat: typeof data.lat === "number" ? data.lat : null,
+      lng: typeof data.lon === "number" ? data.lon : null,
+    }
+  } catch {
+    return { country: "Unknown", city: "Unknown", lat: null, lng: null }
+  }
+}
+
 const VALID_EVENT_TYPES = new Set([
   "instagram_follow_nav",
   "instagram_follow_hero",
@@ -50,6 +72,7 @@ export async function POST(req: Request) {
     const ip_address = forwarded ? forwarded.split(",")[0].trim() : (req.headers.get("x-real-ip") ?? "")
     const user_agent = req.headers.get("user-agent") ?? ""
     const { device_type, os } = parseUserAgent(user_agent)
+    const { country, city, lat, lng } = await lookupGeo(ip_address)
 
     const { error } = await supabase.from("interaction_events").insert({
       event_type,
@@ -58,6 +81,10 @@ export async function POST(req: Request) {
       device_type,
       os,
       user_agent: user_agent || null,
+      country,
+      city,
+      lat,
+      lng,
     })
 
     if (error) {

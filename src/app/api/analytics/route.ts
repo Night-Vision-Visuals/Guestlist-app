@@ -259,7 +259,7 @@ export async function GET(req: Request) {
     // ── QR Code scans ─────────────────────────────────────────────────────────
     const { data: qrScansRaw } = await supabase
       .from("qr_scans")
-      .select("scanned_at, qr_source, os, device_type, country")
+      .select("scanned_at, qr_source, os, device_type, country, city, lat, lng")
       .order("scanned_at", { ascending: true })
 
     const qrScans = qrScansRaw || []
@@ -298,7 +298,7 @@ export async function GET(req: Request) {
     // ── Interaction events ────────────────────────────────────────────────────
     const { data: interactionsRaw } = await supabase
       .from("interaction_events")
-      .select("event_type, occurred_at")
+      .select("event_type, occurred_at, country, city, lat, lng")
       .order("occurred_at", { ascending: true })
 
     const interactions = interactionsRaw || []
@@ -321,6 +321,34 @@ export async function GET(req: Request) {
       const day = new Date(e.occurred_at).toLocaleDateString()
       interactionsByDay[day] = (interactionsByDay[day] || 0) + 1
     })
+
+    // ── Map points ────────────────────────────────────────────────────────────
+    const mapPoints = [
+      ...qrScans
+        .filter((s: any) => s.lat != null && s.lng != null)
+        .map((s: any) => ({
+          type: "qr" as const,
+          source: s.qr_source,
+          lat: s.lat as number,
+          lng: s.lng as number,
+          city: s.city || "Unknown",
+          country: s.country || "Unknown",
+          timestamp: s.scanned_at,
+          label: `QR Scan (${s.qr_source})`,
+        })),
+      ...interactions
+        .filter((e: any) => e.lat != null && e.lng != null)
+        .map((e: any) => ({
+          type: "link" as const,
+          source: e.event_type,
+          lat: e.lat as number,
+          lng: e.lng as number,
+          city: e.city || "Unknown",
+          country: e.country || "Unknown",
+          timestamp: e.occurred_at,
+          label: (e.event_type as string).replace(/_/g, " "),
+        })),
+    ]
 
     return NextResponse.json({
       event,
@@ -378,6 +406,7 @@ export async function GET(req: Request) {
         breakdown: interactionCounts,
         interactionsByDay,
       },
+      mapPoints,
     })
   } catch (error) {
     console.error("Analytics error:", error)

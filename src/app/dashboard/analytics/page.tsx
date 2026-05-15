@@ -1,12 +1,17 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import dynamic from "next/dynamic"
 import { useRouter } from "next/navigation"
 import { useEventContext } from "@/lib/EventContext"
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
   LineChart, Line, CartesianGrid,
 } from "recharts"
+import type { MapPoint } from "./MapView"
+
+// Leaflet must be loaded client-side only (no SSR)
+const MapView = dynamic(() => import("./MapView"), { ssr: false })
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -136,6 +141,7 @@ interface Analytics {
   applicationsByDay: Record<string, number>
   qrStats: QrStats
   engagementStats: EngagementStats
+  mapPoints: MapPoint[]
 }
 
 // ─── Small reusable card ──────────────────────────────────────────────────────
@@ -833,6 +839,58 @@ export default function AnalyticsPage() {
             </div>
           )}
         </div>
+
+        {/* ── Global Reach Map ──────────────────────────────────────────── */}
+        {analytics && (
+          <div className="px-6 md:px-16 pb-16">
+            <div className="border-t border-neutral-800 pt-12">
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <p className="text-[10px] tracking-[0.25em] uppercase text-neutral-500 mb-1">
+                    Global Reach
+                  </p>
+                  <h2 className="text-lg font-light tracking-wide text-white">
+                    QR Scans &amp; Link Clicks — Live Map
+                  </h2>
+                </div>
+                <div className="flex items-center gap-6 text-[11px]" style={{ fontFamily: "'Space Mono', monospace" }}>
+                  <span className="flex items-center gap-2">
+                    <span
+                      className="inline-block w-3 h-3 rounded-full"
+                      style={{ background: "#f59e0b", boxShadow: "0 0 6px #f59e0b" }}
+                    />
+                    <span className="text-neutral-400">QR Scan</span>
+                    <span className="text-white font-bold ml-1">
+                      {analytics.mapPoints.filter((p) => p.type === "qr").length}
+                    </span>
+                  </span>
+                  <span className="flex items-center gap-2">
+                    <span
+                      className="inline-block w-3 h-3 rounded-full"
+                      style={{ background: "#3b82f6", boxShadow: "0 0 6px #3b82f6" }}
+                    />
+                    <span className="text-neutral-400">Link Click</span>
+                    <span className="text-white font-bold ml-1">
+                      {analytics.mapPoints.filter((p) => p.type === "link").length}
+                    </span>
+                  </span>
+                  <span className="text-neutral-600">
+                    {analytics.mapPoints.length} total points
+                  </span>
+                </div>
+              </div>
+
+              {/* Map container */}
+              <div className="border border-neutral-800 rounded overflow-hidden">
+                <MapView points={analytics.mapPoints} />
+              </div>
+
+              <p className="mt-3 text-[10px] tracking-wider text-neutral-700" style={{ fontFamily: "'Space Mono', monospace" }}>
+                Points represent geo-located QR code scans and link/button clicks. Location is derived from visitor IP via ip-api.com. Click any marker for details.
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* Footer */}
         <div className="flex justify-between items-center px-6 md:px-16 py-12 border-t border-neutral-800">
