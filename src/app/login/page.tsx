@@ -5,6 +5,15 @@ import Link from "next/link"
 import Image from "next/image"
 import ReactMarkdown from "react-markdown"
 
+// Fire-and-forget interaction tracker — never blocks navigation
+function track(event_type: string, page: string) {
+  fetch("/api/track-event", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ event_type, page }),
+  }).catch(() => {})
+}
+
 // ─── BirthDatePicker ──────────────────────────────────────────────────────────
 // Defined OUTSIDE page component to prevent remount on every render.
 
@@ -338,6 +347,7 @@ export default function LoginPage() {
     } catch {
       // best-effort — redirect regardless
     } finally {
+      track("post_decline_instagram", "/login")
       window.location.href = "https://www.instagram.com/nightvision_raw"
     }
   }
@@ -468,6 +478,7 @@ export default function LoginPage() {
             href="https://instagram.com/nightvision_raw"
             target="_blank"
             rel="noopener noreferrer"
+            onClick={() => track("instagram_follow_nav", "/login")}
             className="text-xs tracking-[0.2em] uppercase text-neutral-500 hover:text-white transition-colors duration-300"
           >
             Follow
@@ -588,6 +599,7 @@ export default function LoginPage() {
                   href="https://ig.me/m/nightvision_raw"
                   target="_blank"
                   rel="noopener noreferrer"
+                  onClick={() => track("request_key_click", "/login")}
                   className="text-xs tracking-[0.2em] uppercase text-neutral-600 hover:text-white transition-colors duration-300"
                 >
                   Request Key

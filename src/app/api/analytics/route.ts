@@ -278,7 +278,8 @@ export async function GET(req: Request) {
     })
 
     // Conversion rate: poster scans → applications
-    const conversionRate = posterScans > 0 ? Math.round((total / posterScans) * 100) : 0
+    // Conversion: what % of poster scans turned into an application (capped at 100%)
+    const conversionRate = posterScans > 0 ? Math.min(100, Math.round((total / posterScans) * 100)) : 0
 
     // Top os, device_type, country
     const countBy = (field: string) => {
@@ -293,6 +294,33 @@ export async function GET(req: Request) {
     const topOs      = countBy("os")
     const topDevice  = countBy("device_type")
     const topCountry = countBy("country")
+
+    // ── Interaction events ────────────────────────────────────────────────────
+    const { data: interactionsRaw } = await supabase
+      .from("interaction_events")
+      .select("event_type, occurred_at")
+      .order("occurred_at", { ascending: true })
+
+    const interactions = interactionsRaw || []
+
+    // Counts per event_type
+    const interactionCounts: Record<string, number> = {}
+    interactions.forEach((e: any) => {
+      interactionCounts[e.event_type] = (interactionCounts[e.event_type] || 0) + 1
+    })
+
+    // Total instagram clicks (all placements combined)
+    const instagramClicks =
+      (interactionCounts["instagram_follow_nav"]    || 0) +
+      (interactionCounts["instagram_follow_hero"]   || 0) +
+      (interactionCounts["instagram_follow_footer"] || 0)
+
+    // Interactions by day
+    const interactionsByDay: Record<string, number> = {}
+    interactions.forEach((e: any) => {
+      const day = new Date(e.occurred_at).toLocaleDateString()
+      interactionsByDay[day] = (interactionsByDay[day] || 0) + 1
+    })
 
     return NextResponse.json({
       event,
@@ -340,6 +368,15 @@ export async function GET(req: Request) {
         topOs,
         topDevice,
         topCountry,
+      },
+      engagementStats: {
+        instagramClicks,
+        whatsappClicks:    interactionCounts["whatsapp_join_footer"]    || 0,
+        requestKeyClicks:  interactionCounts["request_key_click"]       || 0,
+        accessNowClicks:   interactionCounts["access_now_click"]        || 0,
+        postDeclineClicks: interactionCounts["post_decline_instagram"]  || 0,
+        breakdown: interactionCounts,
+        interactionsByDay,
       },
     })
   } catch (error) {

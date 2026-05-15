@@ -5,6 +5,15 @@ import { ArrowRight, Volume2, TrendingUp, Users } from "lucide-react"
 import Image from "next/image"
 import { useEffect, useRef } from "react"
 
+// Fire-and-forget interaction tracker — never blocks navigation
+function track(event_type: string, page: string) {
+  fetch("/api/track-event", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ event_type, page }),
+  }).catch(() => {})
+}
+
 export default function LandingPage() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
 
@@ -173,6 +182,7 @@ export default function LandingPage() {
               href="https://instagram.com/nightvision_raw"
               target="_blank"
               rel="noopener noreferrer"
+              onClick={() => track("instagram_follow_nav", "/")}
               className="text-xs tracking-[0.2em] uppercase text-neutral-500 hover:text-white transition-colors duration-300"
             >
               Follow
@@ -213,6 +223,7 @@ export default function LandingPage() {
           <div className="flex flex-col md:flex-row gap-6 mb-20">
             <Link
               href="/login"
+              onClick={() => track("access_now_click", "/")}
               className="group relative px-8 md:px-12 py-4 bg-neutral-600 hover:bg-neutral-500 text-white font-light tracking-[0.2em] uppercase text-sm rounded-lg transition-all duration-300 flex items-center justify-center gap-3"
             >
               Access Now
@@ -222,6 +233,7 @@ export default function LandingPage() {
               href="https://instagram.com/nightvision_raw"
               target="_blank"
               rel="noopener noreferrer"
+              onClick={() => track("instagram_follow_hero", "/")}
               className="group relative px-8 md:px-12 py-4 border-2 border-neutral-400 text-neutral-400 font-light tracking-[0.2em] uppercase text-sm rounded-lg hover:bg-neutral-400 hover:text-black transition-all duration-300"
             >
               Follow Us
@@ -308,22 +320,24 @@ export default function LandingPage() {
                 Connect
               </h4>
               <div className="space-y-2">
-                <a
-                  href="https://instagram.com/nightvision_raw"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="block text-neutral-600 hover:text-orange-400 text-sm font-light transition-colors duration-300"
-                >
-                  Instagram
-                </a>
-                <a
-                  href="https://wa.me/message/XXXXXXXXXX"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="block text-neutral-600 hover:text-orange-400 text-sm font-light transition-colors duration-300"
-                >
-                  WhatsApp
-                </a>
+                 <a
+                   href="https://instagram.com/nightvision_raw"
+                   target="_blank"
+                   rel="noopener noreferrer"
+                   onClick={() => track("instagram_follow_footer", "/")}
+                   className="block text-neutral-600 hover:text-orange-400 text-sm font-light transition-colors duration-300"
+                 >
+                   Instagram
+                 </a>
+                 <a
+                   href="https://chat.whatsapp.com/CQNabcNMs1w4ZH7GArYrXD"
+                   target="_blank"
+                   rel="noopener noreferrer"
+                   onClick={() => track("whatsapp_join_footer", "/")}
+                   className="block text-neutral-600 hover:text-orange-400 text-sm font-light transition-colors duration-300"
+                 >
+                   WhatsApp
+                 </a>
                 <a
                   href="mailto:info@nightvision-events.com"
                   className="block text-neutral-600 hover:text-orange-400 text-sm font-light transition-colors duration-300"

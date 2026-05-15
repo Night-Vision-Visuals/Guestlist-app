@@ -93,6 +93,16 @@ interface QrStats {
   topCountry: [string, number][]
 }
 
+interface EngagementStats {
+  instagramClicks: number
+  whatsappClicks: number
+  requestKeyClicks: number
+  accessNowClicks: number
+  postDeclineClicks: number
+  breakdown: Record<string, number>
+  interactionsByDay: Record<string, number>
+}
+
 interface Analytics {
   event: { id: string; name: string }
   statistics: {
@@ -125,6 +135,7 @@ interface Analytics {
   inviteCodeDetails: CodeDetail[]
   applicationsByDay: Record<string, number>
   qrStats: QrStats
+  engagementStats: EngagementStats
 }
 
 // ─── Small reusable card ──────────────────────────────────────────────────────
@@ -217,6 +228,13 @@ export default function AnalyticsPage() {
             Sticker: analytics.qrStats.scansByDay[day]?.sticker ?? 0,
           }))
       })()
+    : []
+
+  // Engagement timeline data
+  const engagementTimelineData = analytics
+    ? Object.entries(analytics.engagementStats.interactionsByDay)
+        .sort((a, b) => new Date(a[0]).getTime() - new Date(b[0]).getTime())
+        .map(([day, count]) => ({ day, count }))
     : []
 
   // Age chart: pick the right count field based on gender filter
@@ -357,8 +375,96 @@ export default function AnalyticsPage() {
                 )}
               </section>
 
-              {/* ── Application Statistics ───────────────────────────────── */}
+              {/* ── Engagement ───────────────────────────────────────────── */}
               <section>
+                <h2 className="text-xs tracking-[0.3em] uppercase text-neutral-500 mb-6" style={{ fontFamily: "Futures, sans-serif" }}>Engagement</h2>
+
+                {/* Stat cards */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+                  <StatCard label="Instagram Clicks" value={analytics.engagementStats.instagramClicks} color="text-pink-400"    sub="all placements" />
+                  <StatCard label="WhatsApp Joins"   value={analytics.engagementStats.whatsappClicks}  color="text-emerald-400" sub="footer click" />
+                  <StatCard label="Request Key"      value={analytics.engagementStats.requestKeyClicks} color="text-yellow-400" sub="DM to get invite" />
+                  <StatCard label="Access Now"       value={analytics.engagementStats.accessNowClicks}  color="text-cyan-400"   sub="→ login page" />
+                </div>
+
+                {/* Funnel: Access Now → Applications → Approved */}
+                {analytics.engagementStats.accessNowClicks > 0 && (
+                  <div className="border border-neutral-800 p-6 rounded mb-4">
+                    <p className="text-xs tracking-[0.2em] uppercase text-neutral-500 mb-5">Funnel</p>
+                    <div className="space-y-3">
+                      {[
+                        { label: "Access Now clicks", value: analytics.engagementStats.accessNowClicks, color: "bg-cyan-700" },
+                        { label: "Applications submitted", value: analytics.statistics.total, color: "bg-blue-700" },
+                        { label: "Approved", value: analytics.statistics.approved, color: "bg-emerald-700" },
+                      ].map(({ label, value, color }) => {
+                        const pct = analytics.engagementStats.accessNowClicks > 0
+                          ? Math.min(100, Math.round((value / analytics.engagementStats.accessNowClicks) * 100))
+                          : 0
+                        return (
+                          <div key={label} className="flex items-center gap-4">
+                            <p className="text-sm text-neutral-400 w-48">{label}</p>
+                            <div className="flex-1 h-2 bg-neutral-900">
+                              <div className={`h-full ${color} transition-all duration-500`} style={{ width: `${pct}%` }} />
+                            </div>
+                            <p className="text-xs text-neutral-400 w-20 text-right">{value} ({pct}%)</p>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Instagram breakdown */}
+                {analytics.engagementStats.instagramClicks > 0 && (
+                  <div className="border border-neutral-800 p-6 rounded mb-4">
+                    <p className="text-xs tracking-[0.2em] uppercase text-neutral-500 mb-4">Instagram Clicks by Placement</p>
+                    <div className="space-y-3">
+                      {[
+                        { label: "Nav (main page)",  key: "instagram_follow_nav",    page: "/" },
+                        { label: "Hero CTA",         key: "instagram_follow_hero",   page: "/" },
+                        { label: "Footer",           key: "instagram_follow_footer", page: "/" },
+                        { label: "Nav (login page)", key: "instagram_follow_nav",    page: "/login" },
+                      ].map(({ label, key }) => {
+                        const count = analytics.engagementStats.breakdown[key] || 0
+                        const pct = analytics.engagementStats.instagramClicks > 0
+                          ? Math.round((count / analytics.engagementStats.instagramClicks) * 100)
+                          : 0
+                        return (
+                          <div key={label} className="flex items-center gap-4">
+                            <p className="text-sm text-neutral-400 w-40">{label}</p>
+                            <div className="flex-1 h-1.5 bg-neutral-900">
+                              <div className="h-full bg-pink-700" style={{ width: `${pct}%` }} />
+                            </div>
+                            <p className="text-xs text-neutral-500 w-16 text-right">{count} ({pct}%)</p>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Interactions over time */}
+                {engagementTimelineData.length > 0 && (
+                  <div className="border border-neutral-800 p-8 rounded">
+                    <p className="text-xs tracking-[0.2em] uppercase text-neutral-500 mb-4">Interactions Over Time</p>
+                    <ResponsiveContainer width="100%" height={180}>
+                      <LineChart data={engagementTimelineData} margin={{ top: 4, right: 8, left: -24, bottom: 0 }}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#262626" />
+                        <XAxis dataKey="day" tick={{ fill: "#737373", fontSize: 10 }} />
+                        <YAxis tick={{ fill: "#737373", fontSize: 10 }} allowDecimals={false} />
+                        <Tooltip
+                          contentStyle={{ background: "#0a0a0a", border: "1px solid #262626", borderRadius: 4 }}
+                          labelStyle={{ color: "#a3a3a3", fontSize: 11 }}
+                          itemStyle={{ color: "#f472b6" }}
+                        />
+                        <Line type="monotone" dataKey="count" stroke="#db2777" strokeWidth={2} dot={false} />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                )}
+              </section>
+
+              {/* ── Application Statistics ───────────────────────────────── */}              <section>
                 <h2 className="text-xs tracking-[0.3em] uppercase text-neutral-500 mb-6">Application Statistics</h2>
                 <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
                   <StatCard label="Total"      value={analytics.statistics.total} />
