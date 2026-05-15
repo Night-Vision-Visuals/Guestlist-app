@@ -175,6 +175,7 @@ export default function AnalyticsPage() {
   const [ageGenderFilter, setAgeGenderFilter] = useState<AgeGenderFilter>("all")
   const [showCodeBreakdown, setShowCodeBreakdown] = useState(false)
   const [showTierBreakdown, setShowTierBreakdown] = useState(false)
+  const [activeTab, setActiveTab] = useState<"event" | "overview">("event")
 
   useEffect(() => {
     if (currentEvent) fetchAnalytics(currentEvent.id)
@@ -301,6 +302,27 @@ export default function AnalyticsPage() {
             <div className="h-px bg-gradient-to-r from-white/40 to-transparent w-20" />
           </div>
 
+          {/* ── Tab switcher ──────────────────────────────────────────── */}
+          <div className="flex gap-0 mb-10 border-b border-neutral-800">
+            {([
+              { key: "event",    label: "Event Details" },
+              { key: "overview", label: "Overview"      },
+            ] as const).map(({ key, label }) => (
+              <button
+                key={key}
+                onClick={() => setActiveTab(key)}
+                className={`px-6 py-3 text-xs tracking-[0.25em] uppercase font-light transition-all duration-200 border-b-2 -mb-px ${
+                  activeTab === key
+                    ? "border-white text-white"
+                    : "border-transparent text-neutral-500 hover:text-neutral-300"
+                }`}
+                style={{ fontFamily: "Futures, sans-serif" }}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+
           {error && (
             <div className="mb-8 text-sm tracking-[0.15em] py-3 px-4 border border-red-400/30 text-red-400 bg-red-400/5">
               {error}
@@ -310,589 +332,609 @@ export default function AnalyticsPage() {
           {analytics && (
             <div className="space-y-10">
 
-              {/* ── QR Code Scans ────────────────────────────────────────── */}
-              <section>
-                <h2 className="text-xs tracking-[0.3em] uppercase text-neutral-500 mb-6" style={{ fontFamily: "Futures, sans-serif" }}>QR Code Scans</h2>
+              {/* ══════════════ OVERVIEW TAB ══════════════ */}
+              {activeTab === "overview" && (
+                <>
+                  {/* ── QR Code Scans ────────────────────────────────────────── */}
+                  <section>
+                    <h2 className="text-sm tracking-[0.3em] uppercase text-neutral-400 mb-1" style={{ fontFamily: "Futures, sans-serif" }}>QR Code Scans</h2>
+                    <div className="h-px bg-neutral-800 mb-6" />
 
-                {/* Stat cards */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-                  <StatCard label="Total Scans"    value={analytics.qrStats.totalScans}   color="text-white" />
-                  <StatCard label="Poster Scans"   value={analytics.qrStats.posterScans}  color="text-cyan-400"   sub="→ login page" />
-                  <StatCard label="Sticker Scans"  value={analytics.qrStats.stickerScans} color="text-purple-400" sub="→ instagram" />
-                  <StatCard
-                    label="Conversion"
-                    value={`${analytics.qrStats.conversionRate}%`}
-                    color="text-emerald-400"
-                    sub="poster scans → applications"
-                  />
-                </div>
-
-                {/* Scans over time chart */}
-                {qrTimelineData.length > 0 && (
-                  <div className="border border-neutral-800 p-8 rounded mb-4">
-                    <p className="text-xs tracking-[0.2em] uppercase text-neutral-500 mb-4">Scans Over Time</p>
-                    <ResponsiveContainer width="100%" height={220}>
-                      <LineChart data={qrTimelineData} margin={{ top: 4, right: 8, left: -24, bottom: 0 }}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#262626" />
-                        <XAxis dataKey="day" tick={{ fill: "#737373", fontSize: 10 }} />
-                        <YAxis tick={{ fill: "#737373", fontSize: 10 }} allowDecimals={false} />
-                        <Tooltip
-                          contentStyle={{ background: "#0a0a0a", border: "1px solid #262626", borderRadius: 4 }}
-                          labelStyle={{ color: "#a3a3a3", fontSize: 11 }}
-                        />
-                        <Line type="monotone" dataKey="Poster"  stroke="#22d3ee" strokeWidth={2} dot={false} />
-                        <Line type="monotone" dataKey="Sticker" stroke="#a855f7" strokeWidth={2} dot={false} />
-                      </LineChart>
-                    </ResponsiveContainer>
-                    <div className="flex gap-6 mt-3">
-                      <span className="text-[10px] text-cyan-500 tracking-[0.15em] uppercase">— Poster</span>
-                      <span className="text-[10px] text-purple-500 tracking-[0.15em] uppercase">— Sticker</span>
+                    {/* Stat cards */}
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+                      <StatCard label="Total Scans"    value={analytics.qrStats.totalScans}   color="text-white" />
+                      <StatCard label="Poster Scans"   value={analytics.qrStats.posterScans}  color="text-cyan-400"   sub="→ login page" />
+                      <StatCard label="Sticker Scans"  value={analytics.qrStats.stickerScans} color="text-purple-400" sub="→ instagram" />
+                      <StatCard
+                        label="Conversion"
+                        value={`${analytics.qrStats.conversionRate}%`}
+                        color="text-emerald-400"
+                        sub="poster scans → applications"
+                      />
                     </div>
-                  </div>
-                )}
 
-                {/* Top breakdowns */}
-                {analytics.qrStats.totalScans > 0 && (
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                    {[
-                      { label: "Device",  entries: analytics.qrStats.topDevice  },
-                      { label: "OS",      entries: analytics.qrStats.topOs      },
-                      { label: "Country", entries: analytics.qrStats.topCountry },
-                    ].map(({ label, entries }) => (
-                      <div key={label} className="border border-neutral-800 p-6 rounded">
-                        <p className="text-xs tracking-[0.2em] uppercase text-neutral-500 mb-4">{label}</p>
-                        <div className="space-y-3">
-                          {entries.slice(0, 5).map(([name, count]) => (
-                            <div key={name} className="flex items-center gap-3">
-                              <p className="text-sm text-neutral-400 w-24 truncate capitalize">{name}</p>
-                              <div className="flex-1 h-1.5 bg-neutral-900">
-                                <div
-                                  className="h-full bg-neutral-500"
-                                  style={{ width: `${Math.round((count / analytics.qrStats.totalScans) * 100)}%` }}
-                                />
-                              </div>
-                              <p className="text-xs text-neutral-500 w-8 text-right">{count}</p>
+                    {/* Scans over time chart */}
+                    {qrTimelineData.length > 0 && (
+                      <div className="border border-neutral-800 p-8 rounded mb-4">
+                        <p className="text-xs tracking-[0.2em] uppercase text-neutral-500 mb-4">Scans Over Time</p>
+                        <ResponsiveContainer width="100%" height={220}>
+                          <LineChart data={qrTimelineData} margin={{ top: 4, right: 8, left: -24, bottom: 0 }}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="#262626" />
+                            <XAxis dataKey="day" tick={{ fill: "#737373", fontSize: 10 }} />
+                            <YAxis tick={{ fill: "#737373", fontSize: 10 }} allowDecimals={false} />
+                            <Tooltip
+                              contentStyle={{ background: "#0a0a0a", border: "1px solid #262626", borderRadius: 4 }}
+                              labelStyle={{ color: "#a3a3a3", fontSize: 11 }}
+                            />
+                            <Line type="monotone" dataKey="Poster"  stroke="#22d3ee" strokeWidth={2} dot={false} />
+                            <Line type="monotone" dataKey="Sticker" stroke="#a855f7" strokeWidth={2} dot={false} />
+                          </LineChart>
+                        </ResponsiveContainer>
+                        <div className="flex gap-6 mt-3">
+                          <span className="text-[10px] text-cyan-500 tracking-[0.15em] uppercase">— Poster</span>
+                          <span className="text-[10px] text-purple-500 tracking-[0.15em] uppercase">— Sticker</span>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Top breakdowns */}
+                    {analytics.qrStats.totalScans > 0 && (
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        {[
+                          { label: "Device",  entries: analytics.qrStats.topDevice  },
+                          { label: "OS",      entries: analytics.qrStats.topOs      },
+                          { label: "Country", entries: analytics.qrStats.topCountry },
+                        ].map(({ label, entries }) => (
+                          <div key={label} className="border border-neutral-800 p-6 rounded">
+                            <p className="text-xs tracking-[0.2em] uppercase text-neutral-500 mb-4">{label}</p>
+                            <div className="space-y-3">
+                              {entries.slice(0, 5).map(([name, count]) => (
+                                <div key={name} className="flex items-center gap-3">
+                                  <p className="text-sm text-neutral-400 w-24 truncate capitalize">{name}</p>
+                                  <div className="flex-1 h-1.5 bg-neutral-900">
+                                    <div
+                                      className="h-full bg-neutral-500"
+                                      style={{ width: `${Math.round((count / analytics.qrStats.totalScans) * 100)}%` }}
+                                    />
+                                  </div>
+                                  <p className="text-xs text-neutral-500 w-8 text-right">{count}</p>
+                                </div>
+                              ))}
                             </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </section>
+
+                  {/* ── Engagement ───────────────────────────────────────────── */}
+                  <section>
+                    <h2 className="text-sm tracking-[0.3em] uppercase text-neutral-400 mb-1" style={{ fontFamily: "Futures, sans-serif" }}>Engagement</h2>
+                    <div className="h-px bg-neutral-800 mb-6" />
+
+                    {/* Stat cards */}
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+                      <StatCard label="Instagram Clicks" value={analytics.engagementStats.instagramClicks} color="text-pink-400"    sub="all placements" />
+                      <StatCard label="WhatsApp Joins"   value={analytics.engagementStats.whatsappClicks}  color="text-emerald-400" sub="footer click" />
+                      <StatCard label="Request Key"      value={analytics.engagementStats.requestKeyClicks} color="text-yellow-400" sub="DM to get invite" />
+                      <StatCard label="Access Now"       value={analytics.engagementStats.accessNowClicks}  color="text-cyan-400"   sub="→ login page" />
+                    </div>
+
+                    {/* Funnel: Access Now → Applications → Approved */}
+                    {analytics.engagementStats.accessNowClicks > 0 && (
+                      <div className="border border-neutral-800 p-6 rounded mb-4">
+                        <p className="text-xs tracking-[0.2em] uppercase text-neutral-500 mb-5">Funnel</p>
+                        <div className="space-y-3">
+                          {[
+                            { label: "Access Now clicks", value: analytics.engagementStats.accessNowClicks, color: "bg-cyan-700" },
+                            { label: "Applications submitted", value: analytics.statistics.total, color: "bg-blue-700" },
+                            { label: "Approved", value: analytics.statistics.approved, color: "bg-emerald-700" },
+                          ].map(({ label, value, color }) => {
+                            const pct = analytics.engagementStats.accessNowClicks > 0
+                              ? Math.min(100, Math.round((value / analytics.engagementStats.accessNowClicks) * 100))
+                              : 0
+                            return (
+                              <div key={label} className="flex items-center gap-4">
+                                <p className="text-sm text-neutral-400 w-48">{label}</p>
+                                <div className="flex-1 h-2 bg-neutral-900">
+                                  <div className={`h-full ${color} transition-all duration-500`} style={{ width: `${pct}%` }} />
+                                </div>
+                                <p className="text-xs text-neutral-400 w-20 text-right">{value} ({pct}%)</p>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Instagram breakdown */}
+                    {analytics.engagementStats.instagramClicks > 0 && (
+                      <div className="border border-neutral-800 p-6 rounded mb-4">
+                        <p className="text-xs tracking-[0.2em] uppercase text-neutral-500 mb-4">Instagram Clicks by Placement</p>
+                        <div className="space-y-3">
+                          {[
+                            { label: "Nav (main page)",  key: "instagram_follow_nav",    page: "/" },
+                            { label: "Hero CTA",         key: "instagram_follow_hero",   page: "/" },
+                            { label: "Footer",           key: "instagram_follow_footer", page: "/" },
+                            { label: "Nav (login page)", key: "instagram_follow_nav",    page: "/login" },
+                          ].map(({ label, key }) => {
+                            const count = analytics.engagementStats.breakdown[key] || 0
+                            const pct = analytics.engagementStats.instagramClicks > 0
+                              ? Math.round((count / analytics.engagementStats.instagramClicks) * 100)
+                              : 0
+                            return (
+                              <div key={label} className="flex items-center gap-4">
+                                <p className="text-sm text-neutral-400 w-40">{label}</p>
+                                <div className="flex-1 h-1.5 bg-neutral-900">
+                                  <div className="h-full bg-pink-700" style={{ width: `${pct}%` }} />
+                                </div>
+                                <p className="text-xs text-neutral-500 w-16 text-right">{count} ({pct}%)</p>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Interactions over time */}
+                    {engagementTimelineData.length > 0 && (
+                      <div className="border border-neutral-800 p-8 rounded">
+                        <p className="text-xs tracking-[0.2em] uppercase text-neutral-500 mb-4">Interactions Over Time</p>
+                        <ResponsiveContainer width="100%" height={180}>
+                          <LineChart data={engagementTimelineData} margin={{ top: 4, right: 8, left: -24, bottom: 0 }}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="#262626" />
+                            <XAxis dataKey="day" tick={{ fill: "#737373", fontSize: 10 }} />
+                            <YAxis tick={{ fill: "#737373", fontSize: 10 }} allowDecimals={false} />
+                            <Tooltip
+                              contentStyle={{ background: "#0a0a0a", border: "1px solid #262626", borderRadius: 4 }}
+                              labelStyle={{ color: "#a3a3a3", fontSize: 11 }}
+                              itemStyle={{ color: "#f472b6" }}
+                            />
+                            <Line type="monotone" dataKey="count" stroke="#db2777" strokeWidth={2} dot={false} />
+                          </LineChart>
+                        </ResponsiveContainer>
+                      </div>
+                    )}
+                  </section>
+
+                  {/* ── Global Reach Map ─────────────────────────────────────── */}
+                  <section>
+                    <h2 className="text-sm tracking-[0.3em] uppercase text-neutral-400 mb-1" style={{ fontFamily: "Futures, sans-serif" }}>Global Reach</h2>
+                    <div className="h-px bg-neutral-800 mb-6" />
+                    <div className="flex items-center justify-between mb-6">
+                      <p className="text-sm font-light tracking-wide text-white">
+                        QR Scans &amp; Link Clicks — Live Map
+                      </p>
+                      <div className="flex items-center gap-6 text-[11px]" style={{ fontFamily: "'Space Mono', monospace" }}>
+                        <span className="flex items-center gap-2">
+                          <span
+                            className="inline-block w-3 h-3 rounded-full"
+                            style={{ background: "#f59e0b", boxShadow: "0 0 6px #f59e0b" }}
+                          />
+                          <span className="text-neutral-400">QR Scan</span>
+                          <span className="text-white font-bold ml-1">
+                            {analytics.mapPoints.filter((p) => p.type === "qr").length}
+                          </span>
+                        </span>
+                        <span className="flex items-center gap-2">
+                          <span
+                            className="inline-block w-3 h-3 rounded-full"
+                            style={{ background: "#3b82f6", boxShadow: "0 0 6px #3b82f6" }}
+                          />
+                          <span className="text-neutral-400">Link Click</span>
+                          <span className="text-white font-bold ml-1">
+                            {analytics.mapPoints.filter((p) => p.type === "link").length}
+                          </span>
+                        </span>
+                        <span className="text-neutral-600">
+                          {analytics.mapPoints.length} total points
+                        </span>
+                      </div>
+                    </div>
+                    <div className="border border-neutral-800 rounded overflow-hidden">
+                      <MapView points={analytics.mapPoints} />
+                    </div>
+                    <p className="mt-3 text-[10px] tracking-wider text-neutral-700" style={{ fontFamily: "'Space Mono', monospace" }}>
+                      Points represent geo-located QR code scans and link/button clicks. Location is derived from visitor IP via ip-api.com. Click any marker for details.
+                    </p>
+                  </section>
+                </>
+              )}
+
+              {/* ══════════════ EVENT DETAILS TAB ══════════════ */}
+              {activeTab === "event" && (
+                <>
+                  {/* ── Application Statistics ───────────────────────────────── */}
+                  <section>
+                    <h2 className="text-sm tracking-[0.3em] uppercase text-neutral-400 mb-1" style={{ fontFamily: "Futures, sans-serif" }}>Application Statistics</h2>
+                    <div className="h-px bg-neutral-800 mb-6" />
+                    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
+                      <StatCard label="Total"      value={analytics.statistics.total} />
+                      <StatCard label="Approved"   value={analytics.statistics.approved}  color="text-emerald-400" sub={`${analytics.statistics.approvalRate}% rate`} />
+                      <StatCard label="Rejected"   value={analytics.statistics.rejected}  color="text-red-400" />
+                      <StatCard label="Waitlist"   value={analytics.statistics.waitlist}  color="text-yellow-400" />
+                      <StatCard label="Pending"    value={analytics.statistics.pending}   color="text-neutral-400" />
+                      <StatCard label="Cancelled"  value={analytics.statistics.cancelled} color="text-neutral-500" />
+                      <StatCard label="Checked In" value={analytics.statistics.checkedIn} color="text-cyan-400" sub={`of ${analytics.statistics.approved} approved`} />
+                    </div>
+                  </section>
+
+                  {/* ── Show / No-show ───────────────────────────────────────── */}
+                  <section>
+                    <h2 className="text-sm tracking-[0.3em] uppercase text-neutral-400 mb-1" style={{ fontFamily: "Futures, sans-serif" }}>Show / No-show</h2>
+                    <div className="h-px bg-neutral-800 mb-6" />
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                      <StatCard label="Show Rate"  value={`${analytics.statistics.showRate}%`} color="text-emerald-400" sub="checked in / approved" />
+                      <StatCard label="No-Shows"   value={analytics.statistics.noShows}        color="text-red-400"     sub="approved but didn't check in" />
+                      <div className="border border-neutral-800 p-6 rounded">
+                        <p className="text-xs tracking-[0.2em] uppercase text-neutral-500 mb-3">Approval Rate</p>
+                        <div className="flex items-center gap-4 mt-4">
+                          <div className="flex-1 h-2 bg-neutral-800 rounded-full overflow-hidden">
+                            <div
+                              className="h-full bg-emerald-600 rounded-full transition-all duration-500"
+                              style={{ width: `${analytics.statistics.approvalRate}%` }}
+                            />
+                          </div>
+                          <span className="text-2xl font-light text-emerald-400">{analytics.statistics.approvalRate}%</span>
+                        </div>
+                      </div>
+                    </div>
+                  </section>
+
+                  {/* ── Income ──────────────────────────────────────────────── */}
+                  <section>
+                    <h2 className="text-sm tracking-[0.3em] uppercase text-neutral-400 mb-1" style={{ fontFamily: "Futures, sans-serif" }}>Income</h2>
+                    <div className="h-px bg-neutral-800 mb-6" />
+                    {analytics.incomeStats.entryFee === null ? (
+                      <div className="border border-neutral-800 p-6 rounded">
+                        <p className="text-sm text-neutral-500 tracking-[0.1em]">
+                          No entry fee configured for this event. Set one in the Events page to enable income tracking.
+                        </p>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
+                          <div className="border border-neutral-800 p-6 rounded">
+                            <p className="text-xs tracking-[0.2em] uppercase text-neutral-500 mb-3">Projected (Approved)</p>
+                            <p className="text-4xl font-light text-cyan-400">€{fmt(analytics.incomeStats.projectedApproved)}</p>
+                            <p className="text-xs text-neutral-600 mt-1">
+                              {analytics.statistics.approved} approved guests · €{analytics.incomeStats.entryFee} base fee
+                              {analytics.incomeStats.friendlistDiscount != null
+                                ? ` · friendlist ${analytics.incomeStats.friendlistDiscount}% off`
+                                : ""}
+                            </p>
+                          </div>
+                          <div className="border border-neutral-800 p-6 rounded">
+                            <p className="text-xs tracking-[0.2em] uppercase text-neutral-500 mb-3">Actually Paid</p>
+                            <p className="text-4xl font-light text-emerald-400">€{fmt(analytics.incomeStats.projectedPaid)}</p>
+                            <p className="text-xs text-neutral-600 mt-1">
+                              {analytics.statistics.checkedIn} guests checked in
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Breakdown table — collapsible */}
+                        <div className="border border-neutral-800 rounded">
+                          <button
+                            onClick={() => setShowTierBreakdown(!showTierBreakdown)}
+                            className="w-full flex items-center justify-between px-6 py-4 text-left hover:bg-neutral-900/40 transition-colors"
+                          >
+                            <span className="text-xs tracking-[0.3em] uppercase text-neutral-500">Breakdown by Tier</span>
+                            <span className="text-neutral-600 text-xs">{showTierBreakdown ? "▲ Hide" : "▼ Show"}</span>
+                          </button>
+                          {showTierBreakdown && (
+                            <div className="overflow-x-auto border-t border-neutral-800 px-6 py-4">
+                              <table className="w-full text-sm">
+                                <thead>
+                                  <tr className="border-b border-neutral-800">
+                                    {["Tier", "Approved", "Revenue (proj.)", "Paid", "Revenue (paid)"].map(h => (
+                                      <th key={h} className="text-left text-[10px] tracking-[0.2em] uppercase text-neutral-600 pb-3 pr-6 last:pr-0">{h}</th>
+                                    ))}
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                    {[
+                                      {
+                                        label: "Guest",
+                                        approvedCount: analytics.incomeStats.breakdown.approved.guestCount,
+                                        approvedRev:   analytics.incomeStats.breakdown.approved.guestRev,
+                                        ciCount:       analytics.incomeStats.breakdown.paid.guestCount,
+                                        ciRev:         analytics.incomeStats.breakdown.paid.guestRev,
+                                      },
+                                      {
+                                        label: "Friendlist",
+                                        approvedCount: analytics.incomeStats.breakdown.approved.friendlistCount,
+                                        approvedRev:   analytics.incomeStats.breakdown.approved.friendlistRev,
+                                        ciCount:       analytics.incomeStats.breakdown.paid.friendlistCount,
+                                        ciRev:         analytics.incomeStats.breakdown.paid.friendlistRev,
+                                      },
+                                       {
+                                         label: "Staff",
+                                         approvedCount: analytics.incomeStats.breakdown.approved.staffCount + analytics.incomeStats.breakdown.approved.crewCount,
+                                         approvedRev:   0,
+                                         ciCount:       analytics.incomeStats.breakdown.paid.staffCount + analytics.incomeStats.breakdown.paid.crewCount,
+                                         ciRev:         0,
+                                       },
+                                    ].map(row => (
+                                    <tr key={row.label} className="border-b border-neutral-900">
+                                      <td className="py-3 pr-6 text-neutral-300 font-light">{row.label}</td>
+                                      <td className="py-3 pr-6 text-neutral-400">{row.approvedCount}</td>
+                                      <td className="py-3 pr-6 text-cyan-400 font-mono">€{fmt(row.approvedRev)}</td>
+                                      <td className="py-3 pr-6 text-neutral-400">{row.ciCount}</td>
+                                      <td className="py-3 text-emerald-400 font-mono">€{fmt(row.ciRev)}</td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          )}
+                        </div>
+                      </>
+                    )}
+                  </section>
+
+                  {/* ── Applications Over Time ───────────────────────────────── */}
+                  <section>
+                    <h2 className="text-sm tracking-[0.3em] uppercase text-neutral-400 mb-1" style={{ fontFamily: "Futures, sans-serif" }}>Applications Over Time</h2>
+                    <div className="h-px bg-neutral-800 mb-6" />
+                    <div className="border border-neutral-800 p-8 rounded">
+                      <ResponsiveContainer width="100%" height={220}>
+                        <LineChart data={timelineData} margin={{ top: 4, right: 8, left: -24, bottom: 0 }}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="#262626" />
+                          <XAxis dataKey="day" tick={{ fill: "#737373", fontSize: 10 }} />
+                          <YAxis tick={{ fill: "#737373", fontSize: 10 }} />
+                          <Tooltip
+                            contentStyle={{ background: "#0a0a0a", border: "1px solid #262626", borderRadius: 4 }}
+                            labelStyle={{ color: "#a3a3a3", fontSize: 11 }}
+                            itemStyle={{ color: "#60a5fa" }}
+                          />
+                          <Line type="monotone" dataKey="count" stroke="#2563eb" strokeWidth={2} dot={false} />
+                        </LineChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </section>
+
+                  {/* ── Demographics ─────────────────────────────────────────── */}
+                  <section>
+                    <h2 className="text-sm tracking-[0.3em] uppercase text-neutral-400 mb-1" style={{ fontFamily: "Futures, sans-serif" }}>Demographics</h2>
+                    <div className="h-px bg-neutral-800 mb-6" />
+                    <div className="border border-neutral-800 p-8 rounded">
+                      <div className="flex items-center justify-between mb-6">
+                        <div className="flex gap-2">
+                          {(["all", "approved"] as const).map((f) => (
+                            <button
+                              key={f}
+                              onClick={() => setDemoFilter(f)}
+                              className={`px-3 py-1 text-[10px] tracking-[0.2em] uppercase border rounded transition-all duration-200 ${
+                                demoFilter === f
+                                  ? "border-white text-white"
+                                  : "border-neutral-700 text-neutral-500 hover:border-neutral-500"
+                              }`}
+                            >
+                              {f === "all" ? "All Guests" : "Approved Only"}
+                            </button>
                           ))}
                         </div>
                       </div>
-                    ))}
-                  </div>
-                )}
-              </section>
 
-              {/* ── Engagement ───────────────────────────────────────────── */}
-              <section>
-                <h2 className="text-xs tracking-[0.3em] uppercase text-neutral-500 mb-6" style={{ fontFamily: "Futures, sans-serif" }}>Engagement</h2>
-
-                {/* Stat cards */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-                  <StatCard label="Instagram Clicks" value={analytics.engagementStats.instagramClicks} color="text-pink-400"    sub="all placements" />
-                  <StatCard label="WhatsApp Joins"   value={analytics.engagementStats.whatsappClicks}  color="text-emerald-400" sub="footer click" />
-                  <StatCard label="Request Key"      value={analytics.engagementStats.requestKeyClicks} color="text-yellow-400" sub="DM to get invite" />
-                  <StatCard label="Access Now"       value={analytics.engagementStats.accessNowClicks}  color="text-cyan-400"   sub="→ login page" />
-                </div>
-
-                {/* Funnel: Access Now → Applications → Approved */}
-                {analytics.engagementStats.accessNowClicks > 0 && (
-                  <div className="border border-neutral-800 p-6 rounded mb-4">
-                    <p className="text-xs tracking-[0.2em] uppercase text-neutral-500 mb-5">Funnel</p>
-                    <div className="space-y-3">
-                      {[
-                        { label: "Access Now clicks", value: analytics.engagementStats.accessNowClicks, color: "bg-cyan-700" },
-                        { label: "Applications submitted", value: analytics.statistics.total, color: "bg-blue-700" },
-                        { label: "Approved", value: analytics.statistics.approved, color: "bg-emerald-700" },
-                      ].map(({ label, value, color }) => {
-                        const pct = analytics.engagementStats.accessNowClicks > 0
-                          ? Math.min(100, Math.round((value / analytics.engagementStats.accessNowClicks) * 100))
-                          : 0
-                        return (
-                          <div key={label} className="flex items-center gap-4">
-                            <p className="text-sm text-neutral-400 w-48">{label}</p>
-                            <div className="flex-1 h-2 bg-neutral-900">
-                              <div className={`h-full ${color} transition-all duration-500`} style={{ width: `${pct}%` }} />
-                            </div>
-                            <p className="text-xs text-neutral-400 w-20 text-right">{value} ({pct}%)</p>
+                      {gender && (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+                          <div className="space-y-4">
+                            <h4 className="text-xs tracking-[0.15em] uppercase text-neutral-600 mb-3">Gender</h4>
+                            {[
+                              { label: "Male",    count: gender.male,    pct: gender.malePercent,    color: "bg-blue-600" },
+                              { label: "Female",  count: gender.female,  pct: gender.femalePercent,  color: "bg-pink-600" },
+                              { label: "Diverse", count: gender.diverse, pct: gender.diversePercent, color: "bg-purple-600" },
+                            ].map(({ label, count, pct, color }) => (
+                              <div key={label} className="flex items-center gap-4">
+                                <p className="text-sm text-neutral-400 w-16">{label}</p>
+                                <div className="flex-1 h-2 bg-neutral-900">
+                                  <div className={`h-full ${color}`} style={{ width: `${pct}%` }} />
+                                </div>
+                                <p className="text-xs text-neutral-400 w-20 text-right">{count} ({pct}%)</p>
+                              </div>
+                            ))}
                           </div>
-                        )
-                      })}
-                    </div>
-                  </div>
-                )}
 
-                {/* Instagram breakdown */}
-                {analytics.engagementStats.instagramClicks > 0 && (
-                  <div className="border border-neutral-800 p-6 rounded mb-4">
-                    <p className="text-xs tracking-[0.2em] uppercase text-neutral-500 mb-4">Instagram Clicks by Placement</p>
-                    <div className="space-y-3">
-                      {[
-                        { label: "Nav (main page)",  key: "instagram_follow_nav",    page: "/" },
-                        { label: "Hero CTA",         key: "instagram_follow_hero",   page: "/" },
-                        { label: "Footer",           key: "instagram_follow_footer", page: "/" },
-                        { label: "Nav (login page)", key: "instagram_follow_nav",    page: "/login" },
-                      ].map(({ label, key }) => {
-                        const count = analytics.engagementStats.breakdown[key] || 0
-                        const pct = analytics.engagementStats.instagramClicks > 0
-                          ? Math.round((count / analytics.engagementStats.instagramClicks) * 100)
-                          : 0
-                        return (
-                          <div key={label} className="flex items-center gap-4">
-                            <p className="text-sm text-neutral-400 w-40">{label}</p>
-                            <div className="flex-1 h-1.5 bg-neutral-900">
-                              <div className="h-full bg-pink-700" style={{ width: `${pct}%` }} />
+                          <div className="flex flex-col justify-center gap-4">
+                            <h4 className="text-xs tracking-[0.15em] uppercase text-neutral-600">Age</h4>
+                            <div className="flex gap-8">
+                              <div>
+                                <p className="text-[10px] text-neutral-500 uppercase tracking-wider mb-1">Average</p>
+                                <p className="text-5xl font-light text-white">{gender.averageAge}</p>
+                              </div>
+                              <div className="flex flex-col justify-end gap-2">
+                                <div>
+                                  <p className="text-[10px] text-neutral-500 uppercase tracking-wider">Min</p>
+                                  <p className="text-xl font-light text-neutral-300">{gender.minAge || "—"}</p>
+                                </div>
+                                <div>
+                                  <p className="text-[10px] text-neutral-500 uppercase tracking-wider">Max</p>
+                                  <p className="text-xl font-light text-neutral-300">{gender.maxAge || "—"}</p>
+                                </div>
+                              </div>
                             </div>
-                            <p className="text-xs text-neutral-500 w-16 text-right">{count} ({pct}%)</p>
+                            <p className="text-[10px] text-neutral-600">
+                              {demoFilter === "all"
+                                ? `Based on ${genderTotal} total guests`
+                                : `Based on ${genderTotal} approved guests`}
+                            </p>
                           </div>
-                        )
-                      })}
+                        </div>
+                      )}
                     </div>
-                  </div>
-                )}
+                  </section>
 
-                {/* Interactions over time */}
-                {engagementTimelineData.length > 0 && (
-                  <div className="border border-neutral-800 p-8 rounded">
-                    <p className="text-xs tracking-[0.2em] uppercase text-neutral-500 mb-4">Interactions Over Time</p>
-                    <ResponsiveContainer width="100%" height={180}>
-                      <LineChart data={engagementTimelineData} margin={{ top: 4, right: 8, left: -24, bottom: 0 }}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="#262626" />
-                        <XAxis dataKey="day" tick={{ fill: "#737373", fontSize: 10 }} />
-                        <YAxis tick={{ fill: "#737373", fontSize: 10 }} allowDecimals={false} />
-                        <Tooltip
-                          contentStyle={{ background: "#0a0a0a", border: "1px solid #262626", borderRadius: 4 }}
-                          labelStyle={{ color: "#a3a3a3", fontSize: 11 }}
-                          itemStyle={{ color: "#f472b6" }}
-                        />
-                        <Line type="monotone" dataKey="count" stroke="#db2777" strokeWidth={2} dot={false} />
-                      </LineChart>
-                    </ResponsiveContainer>
-                  </div>
-                )}
-              </section>
-
-              {/* ── Application Statistics ───────────────────────────────── */}              <section>
-                <h2 className="text-xs tracking-[0.3em] uppercase text-neutral-500 mb-6">Application Statistics</h2>
-                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
-                  <StatCard label="Total"      value={analytics.statistics.total} />
-                  <StatCard label="Approved"   value={analytics.statistics.approved}  color="text-emerald-400" sub={`${analytics.statistics.approvalRate}% rate`} />
-                  <StatCard label="Rejected"   value={analytics.statistics.rejected}  color="text-red-400" />
-                  <StatCard label="Waitlist"   value={analytics.statistics.waitlist}  color="text-yellow-400" />
-                  <StatCard label="Pending"    value={analytics.statistics.pending}   color="text-neutral-400" />
-                  <StatCard label="Cancelled"  value={analytics.statistics.cancelled} color="text-neutral-500" />
-                  <StatCard label="Checked In" value={analytics.statistics.checkedIn} color="text-cyan-400" sub={`of ${analytics.statistics.approved} approved`} />
-                </div>
-              </section>
-
-              {/* ── Show / No-show ───────────────────────────────────────── */}
-              <section>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                  <StatCard label="Show Rate"  value={`${analytics.statistics.showRate}%`} color="text-emerald-400" sub="checked in / approved" />
-                  <StatCard label="No-Shows"   value={analytics.statistics.noShows}        color="text-red-400"     sub="approved but didn't check in" />
-                  <div className="border border-neutral-800 p-6 rounded">
-                    <p className="text-xs tracking-[0.2em] uppercase text-neutral-500 mb-3">Approval Rate</p>
-                    <div className="flex items-center gap-4 mt-4">
-                      <div className="flex-1 h-2 bg-neutral-800 rounded-full overflow-hidden">
-                        <div
-                          className="h-full bg-emerald-600 rounded-full transition-all duration-500"
-                          style={{ width: `${analytics.statistics.approvalRate}%` }}
-                        />
+                  {/* ── Age Distribution ─────────────────────────────────────── */}
+                  <section>
+                    <h2 className="text-sm tracking-[0.3em] uppercase text-neutral-400 mb-1" style={{ fontFamily: "Futures, sans-serif" }}>Age Distribution</h2>
+                    <div className="h-px bg-neutral-800 mb-6" />
+                    <div className="border border-neutral-800 p-8 rounded">
+                      <div className="flex items-center justify-between mb-6">
+                        <div className="flex gap-2">
+                          {(["all", "male", "female", "diverse"] as const).map((f) => (
+                            <button
+                              key={f}
+                              onClick={() => setAgeGenderFilter(f)}
+                              className={`px-3 py-1 text-[10px] tracking-[0.2em] uppercase border rounded transition-all duration-200 ${
+                                ageGenderFilter === f
+                                  ? "border-white text-white"
+                                  : "border-neutral-700 text-neutral-500 hover:border-neutral-500"
+                              }`}
+                            >
+                              {f === "all" ? "All" : f.charAt(0).toUpperCase() + f.slice(1)}
+                            </button>
+                          ))}
+                        </div>
                       </div>
-                      <span className="text-2xl font-light text-emerald-400">{analytics.statistics.approvalRate}%</span>
+                      <ResponsiveContainer width="100%" height={220}>
+                        <BarChart data={ageChartData} margin={{ top: 4, right: 8, left: -24, bottom: 0 }}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="#262626" />
+                          <XAxis dataKey="label" tick={{ fill: "#737373", fontSize: 10 }} />
+                          <YAxis tick={{ fill: "#737373", fontSize: 10 }} allowDecimals={false} />
+                          <Tooltip
+                            contentStyle={{ background: "#0a0a0a", border: "1px solid #262626", borderRadius: 4 }}
+                            labelStyle={{ color: "#a3a3a3", fontSize: 11 }}
+                          />
+                          <Bar dataKey="Guests" fill={
+                            ageGenderFilter === "male" ? "#3b82f6"
+                            : ageGenderFilter === "female" ? "#ec4899"
+                            : ageGenderFilter === "diverse" ? "#a855f7"
+                            : "#404040"
+                          } />
+                          {ageGenderFilter === "all" && (
+                            <Bar dataKey="Approved" fill="#10b981" />
+                          )}
+                        </BarChart>
+                      </ResponsiveContainer>
+                      {ageGenderFilter === "all" && (
+                        <p className="text-[10px] text-neutral-700 mt-2">Grey = all applications · Green = approved</p>
+                      )}
                     </div>
-                  </div>
-                </div>
-              </section>
+                  </section>
 
-              {/* ── Income ──────────────────────────────────────────────── */}
-              <section>
-                <h2 className="text-xs tracking-[0.3em] uppercase text-neutral-500 mb-6">Income</h2>
-                {analytics.incomeStats.entryFee === null ? (
-                  <div className="border border-neutral-800 p-6 rounded">
-                    <p className="text-sm text-neutral-500 tracking-[0.1em]">
-                      No entry fee configured for this event. Set one in the Events page to enable income tracking.
-                    </p>
-                  </div>
-                ) : (
-                  <>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
-                      <div className="border border-neutral-800 p-6 rounded">
-                        <p className="text-xs tracking-[0.2em] uppercase text-neutral-500 mb-3">Projected (Approved)</p>
-                        <p className="text-4xl font-light text-cyan-400">€{fmt(analytics.incomeStats.projectedApproved)}</p>
-                        <p className="text-xs text-neutral-600 mt-1">
-                          {analytics.statistics.approved} approved guests · €{analytics.incomeStats.entryFee} base fee
-                          {analytics.incomeStats.friendlistDiscount != null
-                            ? ` · friendlist ${analytics.incomeStats.friendlistDiscount}% off`
-                            : ""}
-                        </p>
+                  {/* ── Heard About Us ───────────────────────────────────────── */}
+                  {Object.keys(analytics.heardAboutUs).length > 0 && (
+                    <section>
+                      <h2 className="text-sm tracking-[0.3em] uppercase text-neutral-400 mb-1" style={{ fontFamily: "Futures, sans-serif" }}>Heard About Us</h2>
+                      <div className="h-px bg-neutral-800 mb-6" />
+                      <div className="border border-neutral-800 p-8 rounded">
+                        <div className="space-y-3">
+                          {Object.entries(analytics.heardAboutUs)
+                            .sort((a, b) => b[1] - a[1])
+                            .map(([source, count]) => (
+                              <div key={source} className="flex items-center gap-4">
+                                <p className="text-sm text-neutral-400 min-w-[140px] capitalize">{source.replace(/_/g, " ")}</p>
+                                <div className="flex-1 h-2 bg-neutral-900">
+                                  <div
+                                    className="h-full bg-cyan-700"
+                                    style={{ width: `${(count / analytics.statistics.total) * 100}%` }}
+                                  />
+                                </div>
+                                <p className="text-xs text-neutral-400 min-w-[64px] text-right">
+                                  {count} ({Math.round((count / analytics.statistics.total) * 100)}%)
+                                </p>
+                              </div>
+                            ))}
+                        </div>
                       </div>
-                      <div className="border border-neutral-800 p-6 rounded">
-                        <p className="text-xs tracking-[0.2em] uppercase text-neutral-500 mb-3">Actually Paid</p>
-                        <p className="text-4xl font-light text-emerald-400">€{fmt(analytics.incomeStats.projectedPaid)}</p>
-                        <p className="text-xs text-neutral-600 mt-1">
-                          {analytics.statistics.checkedIn} guests checked in
-                        </p>
-                      </div>
+                    </section>
+                  )}
+
+                  {/* ── Invite Code Statistics ───────────────────────────────── */}
+                  <section>
+                    <h2 className="text-sm tracking-[0.3em] uppercase text-neutral-400 mb-1" style={{ fontFamily: "Futures, sans-serif" }}>Invite Code Statistics</h2>
+                    <div className="h-px bg-neutral-800 mb-6" />
+                    <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-8">
+                      <StatCard label="Total Codes" value={analytics.inviteStats.totalCodes} />
+                      <StatCard label="Generated"   value={analytics.inviteStats.totalGenerated} color="text-blue-400" />
+                      <StatCard label="Used"        value={analytics.inviteStats.totalUsed}      color="text-emerald-400" />
+                      <StatCard label="Declined"    value={analytics.inviteStats.totalDeclined}  color="text-purple-400" sub="guest declined event" />
+                      <StatCard label="Usage Rate"  value={`${analytics.inviteStats.usageRate}%`} color="text-yellow-400" />
                     </div>
 
-                    {/* Breakdown table — collapsible */}
-                    <div className="border border-neutral-800 rounded">
-                      <button
-                        onClick={() => setShowTierBreakdown(!showTierBreakdown)}
-                        className="w-full flex items-center justify-between px-6 py-4 text-left hover:bg-neutral-900/40 transition-colors"
-                      >
-                        <span className="text-xs tracking-[0.3em] uppercase text-neutral-500">Breakdown by Tier</span>
-                        <span className="text-neutral-600 text-xs">{showTierBreakdown ? "▲ Hide" : "▼ Show"}</span>
-                      </button>
-                      {showTierBreakdown && (
-                        <div className="overflow-x-auto border-t border-neutral-800 px-6 py-4">
+                    {/* Per-admin stats */}
+                    {analytics.inviteCodesByAdmin.length > 0 && (
+                      <div className="border border-neutral-800 p-6 mb-4 rounded">
+                        <h3 className="text-xs tracking-[0.3em] uppercase text-neutral-500 mb-4">By Admin</h3>
+                        <div className="overflow-x-auto">
                           <table className="w-full text-sm">
                             <thead>
                               <tr className="border-b border-neutral-800">
-                                {["Tier", "Approved", "Revenue (proj.)", "Paid", "Revenue (paid)"].map(h => (
-                                  <th key={h} className="text-left text-[10px] tracking-[0.2em] uppercase text-neutral-600 pb-3 pr-6 last:pr-0">{h}</th>
+                                {["Admin","Codes","Capacity","Used","Usage%","Approved","Checked In","Show%"].map(h => (
+                                  <th key={h} className="text-left text-[10px] tracking-[0.2em] uppercase text-neutral-600 pb-3 pr-4 last:pr-0">{h}</th>
                                 ))}
                               </tr>
                             </thead>
                             <tbody>
-                                {[
-                                  {
-                                    label: "Guest",
-                                    approvedCount: analytics.incomeStats.breakdown.approved.guestCount,
-                                    approvedRev:   analytics.incomeStats.breakdown.approved.guestRev,
-                                    ciCount:       analytics.incomeStats.breakdown.paid.guestCount,
-                                    ciRev:         analytics.incomeStats.breakdown.paid.guestRev,
-                                  },
-                                  {
-                                    label: "Friendlist",
-                                    approvedCount: analytics.incomeStats.breakdown.approved.friendlistCount,
-                                    approvedRev:   analytics.incomeStats.breakdown.approved.friendlistRev,
-                                    ciCount:       analytics.incomeStats.breakdown.paid.friendlistCount,
-                                    ciRev:         analytics.incomeStats.breakdown.paid.friendlistRev,
-                                  },
-                                   {
-                                     label: "Staff",
-                                     approvedCount: analytics.incomeStats.breakdown.approved.staffCount + analytics.incomeStats.breakdown.approved.crewCount,
-                                     approvedRev:   0,
-                                     ciCount:       analytics.incomeStats.breakdown.paid.staffCount + analytics.incomeStats.breakdown.paid.crewCount,
-                                     ciRev:         0,
-                                   },
-                                ].map(row => (
-                                <tr key={row.label} className="border-b border-neutral-900">
-                                  <td className="py-3 pr-6 text-neutral-300 font-light">{row.label}</td>
-                                  <td className="py-3 pr-6 text-neutral-400">{row.approvedCount}</td>
-                                  <td className="py-3 pr-6 text-cyan-400 font-mono">€{fmt(row.approvedRev)}</td>
-                                  <td className="py-3 pr-6 text-neutral-400">{row.ciCount}</td>
-                                  <td className="py-3 text-emerald-400 font-mono">€{fmt(row.ciRev)}</td>
+                              {analytics.inviteCodesByAdmin.map((a) => (
+                                <tr key={a.adminId} className="border-b border-neutral-900">
+                                  <td className="py-3 pr-4 text-white font-light">{a.username}</td>
+                                  <td className="py-3 pr-4 text-neutral-400">{a.codesCreated}</td>
+                                  <td className="py-3 pr-4 text-neutral-400">{a.totalCapacity}</td>
+                                  <td className="py-3 pr-4 text-neutral-400">{a.totalUsed}</td>
+                                  <td className="py-3 pr-4 text-neutral-400">{a.usageRate}%</td>
+                                  <td className="py-3 pr-4 text-emerald-400">{a.approvedGuests}</td>
+                                  <td className="py-3 pr-4 text-cyan-400">{a.checkedInGuests}</td>
+                                  <td className="py-3 text-neutral-400">{a.showRate}%</td>
                                 </tr>
                               ))}
                             </tbody>
                           </table>
                         </div>
-                      )}
-                    </div>
-                  </>
-                )}
-              </section>
-
-              {/* ── Applications Over Time ───────────────────────────────── */}
-              <section className="border border-neutral-800 p-8 rounded">
-                <ResponsiveContainer width="100%" height={220}>
-                  <LineChart data={timelineData} margin={{ top: 4, right: 8, left: -24, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#262626" />
-                    <XAxis dataKey="day" tick={{ fill: "#737373", fontSize: 10 }} />
-                    <YAxis tick={{ fill: "#737373", fontSize: 10 }} />
-                    <Tooltip
-                      contentStyle={{ background: "#0a0a0a", border: "1px solid #262626", borderRadius: 4 }}
-                      labelStyle={{ color: "#a3a3a3", fontSize: 11 }}
-                      itemStyle={{ color: "#60a5fa" }}
-                    />
-                    <Line type="monotone" dataKey="count" stroke="#2563eb" strokeWidth={2} dot={false} />
-                  </LineChart>
-                </ResponsiveContainer>
-              </section>
-
-              {/* ── Demographics ─────────────────────────────────────────── */}
-              <section className="border border-neutral-800 p-8 rounded">
-                <div className="flex items-center justify-between mb-6">
-                  <h3 className="text-xs tracking-[0.3em] uppercase text-neutral-500">Demographics</h3>
-                  <div className="flex gap-2">
-                    {(["all", "approved"] as const).map((f) => (
-                      <button
-                        key={f}
-                        onClick={() => setDemoFilter(f)}
-                        className={`px-3 py-1 text-[10px] tracking-[0.2em] uppercase border rounded transition-all duration-200 ${
-                          demoFilter === f
-                            ? "border-white text-white"
-                            : "border-neutral-700 text-neutral-500 hover:border-neutral-500"
-                        }`}
-                      >
-                        {f === "all" ? "All Guests" : "Approved Only"}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {gender && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-                    <div className="space-y-4">
-                      <h4 className="text-xs tracking-[0.15em] uppercase text-neutral-600 mb-3">Gender</h4>
-                      {[
-                        { label: "Male",    count: gender.male,    pct: gender.malePercent,    color: "bg-blue-600" },
-                        { label: "Female",  count: gender.female,  pct: gender.femalePercent,  color: "bg-pink-600" },
-                        { label: "Diverse", count: gender.diverse, pct: gender.diversePercent, color: "bg-purple-600" },
-                      ].map(({ label, count, pct, color }) => (
-                        <div key={label} className="flex items-center gap-4">
-                          <p className="text-sm text-neutral-400 w-16">{label}</p>
-                          <div className="flex-1 h-2 bg-neutral-900">
-                            <div className={`h-full ${color}`} style={{ width: `${pct}%` }} />
-                          </div>
-                          <p className="text-xs text-neutral-400 w-20 text-right">{count} ({pct}%)</p>
-                        </div>
-                      ))}
-                    </div>
-
-                    <div className="flex flex-col justify-center gap-4">
-                      <h4 className="text-xs tracking-[0.15em] uppercase text-neutral-600">Age</h4>
-                      <div className="flex gap-8">
-                        <div>
-                          <p className="text-[10px] text-neutral-500 uppercase tracking-wider mb-1">Average</p>
-                          <p className="text-5xl font-light text-white">{gender.averageAge}</p>
-                        </div>
-                        <div className="flex flex-col justify-end gap-2">
-                          <div>
-                            <p className="text-[10px] text-neutral-500 uppercase tracking-wider">Min</p>
-                            <p className="text-xl font-light text-neutral-300">{gender.minAge || "—"}</p>
-                          </div>
-                          <div>
-                            <p className="text-[10px] text-neutral-500 uppercase tracking-wider">Max</p>
-                            <p className="text-xl font-light text-neutral-300">{gender.maxAge || "—"}</p>
-                          </div>
-                        </div>
                       </div>
-                      <p className="text-[10px] text-neutral-600">
-                        {demoFilter === "all"
-                          ? `Based on ${genderTotal} total guests`
-                          : `Based on ${genderTotal} approved guests`}
-                      </p>
-                    </div>
-                  </div>
-                )}
-              </section>
-
-              {/* ── Age Distribution ─────────────────────────────────────── */}
-              <section className="border border-neutral-800 p-8 rounded">
-                <div className="flex items-center justify-between mb-6">
-                  <h3 className="text-xs tracking-[0.3em] uppercase text-neutral-500">Age Distribution</h3>
-                  <div className="flex gap-2">
-                    {(["all", "male", "female", "diverse"] as const).map((f) => (
-                      <button
-                        key={f}
-                        onClick={() => setAgeGenderFilter(f)}
-                        className={`px-3 py-1 text-[10px] tracking-[0.2em] uppercase border rounded transition-all duration-200 ${
-                          ageGenderFilter === f
-                            ? "border-white text-white"
-                            : "border-neutral-700 text-neutral-500 hover:border-neutral-500"
-                        }`}
-                      >
-                        {f === "all" ? "All" : f.charAt(0).toUpperCase() + f.slice(1)}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                <ResponsiveContainer width="100%" height={220}>
-                  <BarChart data={ageChartData} margin={{ top: 4, right: 8, left: -24, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#262626" />
-                    <XAxis dataKey="label" tick={{ fill: "#737373", fontSize: 10 }} />
-                    <YAxis tick={{ fill: "#737373", fontSize: 10 }} allowDecimals={false} />
-                    <Tooltip
-                      contentStyle={{ background: "#0a0a0a", border: "1px solid #262626", borderRadius: 4 }}
-                      labelStyle={{ color: "#a3a3a3", fontSize: 11 }}
-                    />
-                    <Bar dataKey="Guests" fill={
-                      ageGenderFilter === "male" ? "#3b82f6"
-                      : ageGenderFilter === "female" ? "#ec4899"
-                      : ageGenderFilter === "diverse" ? "#a855f7"
-                      : "#404040"
-                    } />
-                    {ageGenderFilter === "all" && (
-                      <Bar dataKey="Approved" fill="#10b981" />
                     )}
-                  </BarChart>
-                </ResponsiveContainer>
-                {ageGenderFilter === "all" && (
-                  <p className="text-[10px] text-neutral-700 mt-2">Grey = all applications · Green = approved</p>
-                )}
-              </section>
 
-              {/* ── Heard About Us ───────────────────────────────────────── */}
-              {Object.keys(analytics.heardAboutUs).length > 0 && (
-                <section className="border border-neutral-800 p-8 rounded">
-                  <div className="space-y-3">
-                    {Object.entries(analytics.heardAboutUs)
-                      .sort((a, b) => b[1] - a[1])
-                      .map(([source, count]) => (
-                        <div key={source} className="flex items-center gap-4">
-                          <p className="text-sm text-neutral-400 min-w-[140px] capitalize">{source.replace(/_/g, " ")}</p>
-                          <div className="flex-1 h-2 bg-neutral-900">
-                            <div
-                              className="h-full bg-cyan-700"
-                              style={{ width: `${(count / analytics.statistics.total) * 100}%` }}
-                            />
+                    {/* Collapsible code breakdown */}
+                    {analytics.inviteCodeDetails.length > 0 && (
+                      <div className="border border-neutral-800 rounded">
+                        <button
+                          onClick={() => setShowCodeBreakdown(!showCodeBreakdown)}
+                          className="w-full flex items-center justify-between px-6 py-4 text-left hover:bg-neutral-900/40 transition-colors"
+                        >
+                          <span className="text-xs tracking-[0.3em] uppercase text-neutral-500">
+                            Individual Code Breakdown ({analytics.inviteCodeDetails.length} codes)
+                          </span>
+                          <span className="text-neutral-600 text-xs">{showCodeBreakdown ? "▲ Hide" : "▼ Show"}</span>
+                        </button>
+                        {showCodeBreakdown && (
+                          <div className="overflow-x-auto border-t border-neutral-800">
+                            <table className="w-full text-xs">
+                              <thead>
+                                <tr className="border-b border-neutral-800 bg-neutral-950">
+                                  {["Code","Tier","Note","Created By","Max","Used","Rate%","Status"].map(h => (
+                                    <th key={h} className="text-left tracking-[0.15em] uppercase text-neutral-600 px-4 py-3">{h}</th>
+                                  ))}
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {analytics.inviteCodeDetails.map((c) => (
+                                  <tr key={c.id} className="border-b border-neutral-900 hover:bg-neutral-900/30">
+                                    <td className="px-4 py-3 font-mono text-white tracking-wider">{c.code}</td>
+                                    <td className="px-4 py-3 text-neutral-400 capitalize">{c.tier}</td>
+                                    <td className="px-4 py-3 text-neutral-500 max-w-[140px] truncate">{c.comment || "—"}</td>
+                                    <td className="px-4 py-3 text-neutral-400">{c.createdBy}</td>
+                                    <td className="px-4 py-3 text-neutral-400">{c.maxUses}</td>
+                                    <td className="px-4 py-3 text-neutral-400">{c.currentUses}</td>
+                                    <td className="px-4 py-3 text-neutral-400">{c.usageRate}%</td>
+                                    <td className={`px-4 py-3 capitalize ${statusCodeColor[c.status] || "text-neutral-400"}`}>
+                                      {c.status}
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
                           </div>
-                          <p className="text-xs text-neutral-400 min-w-[64px] text-right">
-                            {count} ({Math.round((count / analytics.statistics.total) * 100)}%)
-                          </p>
-                        </div>
-                      ))}
-                  </div>
-                </section>
+                        )}
+                      </div>
+                    )}
+                  </section>
+                </>
               )}
-
-              {/* ── Invite Code Statistics ───────────────────────────────── */}
-              <section>
-                <h2 className="text-xs tracking-[0.3em] uppercase text-neutral-500 mb-6">Invite Code Statistics</h2>
-                <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-8">
-                  <StatCard label="Total Codes" value={analytics.inviteStats.totalCodes} />
-                  <StatCard label="Generated"   value={analytics.inviteStats.totalGenerated} color="text-blue-400" />
-                  <StatCard label="Used"        value={analytics.inviteStats.totalUsed}      color="text-emerald-400" />
-                  <StatCard label="Declined"    value={analytics.inviteStats.totalDeclined}  color="text-purple-400" sub="guest declined event" />
-                  <StatCard label="Usage Rate"  value={`${analytics.inviteStats.usageRate}%`} color="text-yellow-400" />
-                </div>
-
-                {/* Per-admin stats */}
-                {analytics.inviteCodesByAdmin.length > 0 && (
-                  <div className="border border-neutral-800 p-6 mb-4 rounded">
-                    <h3 className="text-xs tracking-[0.3em] uppercase text-neutral-500 mb-4">By Admin</h3>
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-sm">
-                        <thead>
-                          <tr className="border-b border-neutral-800">
-                            {["Admin","Codes","Capacity","Used","Usage%","Approved","Checked In","Show%"].map(h => (
-                              <th key={h} className="text-left text-[10px] tracking-[0.2em] uppercase text-neutral-600 pb-3 pr-4 last:pr-0">{h}</th>
-                            ))}
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {analytics.inviteCodesByAdmin.map((a) => (
-                            <tr key={a.adminId} className="border-b border-neutral-900">
-                              <td className="py-3 pr-4 text-white font-light">{a.username}</td>
-                              <td className="py-3 pr-4 text-neutral-400">{a.codesCreated}</td>
-                              <td className="py-3 pr-4 text-neutral-400">{a.totalCapacity}</td>
-                              <td className="py-3 pr-4 text-neutral-400">{a.totalUsed}</td>
-                              <td className="py-3 pr-4 text-neutral-400">{a.usageRate}%</td>
-                              <td className="py-3 pr-4 text-emerald-400">{a.approvedGuests}</td>
-                              <td className="py-3 pr-4 text-cyan-400">{a.checkedInGuests}</td>
-                              <td className="py-3 text-neutral-400">{a.showRate}%</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                )}
-
-                {/* Collapsible code breakdown */}
-                {analytics.inviteCodeDetails.length > 0 && (
-                  <div className="border border-neutral-800 rounded">
-                    <button
-                      onClick={() => setShowCodeBreakdown(!showCodeBreakdown)}
-                      className="w-full flex items-center justify-between px-6 py-4 text-left hover:bg-neutral-900/40 transition-colors"
-                    >
-                      <span className="text-xs tracking-[0.3em] uppercase text-neutral-500">
-                        Individual Code Breakdown ({analytics.inviteCodeDetails.length} codes)
-                      </span>
-                      <span className="text-neutral-600 text-xs">{showCodeBreakdown ? "▲ Hide" : "▼ Show"}</span>
-                    </button>
-                    {showCodeBreakdown && (
-                      <div className="overflow-x-auto border-t border-neutral-800">
-                        <table className="w-full text-xs">
-                          <thead>
-                            <tr className="border-b border-neutral-800 bg-neutral-950">
-                              {["Code","Tier","Note","Created By","Max","Used","Rate%","Status"].map(h => (
-                                <th key={h} className="text-left tracking-[0.15em] uppercase text-neutral-600 px-4 py-3">{h}</th>
-                              ))}
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {analytics.inviteCodeDetails.map((c) => (
-                              <tr key={c.id} className="border-b border-neutral-900 hover:bg-neutral-900/30">
-                                <td className="px-4 py-3 font-mono text-white tracking-wider">{c.code}</td>
-                                <td className="px-4 py-3 text-neutral-400 capitalize">{c.tier}</td>
-                                <td className="px-4 py-3 text-neutral-500 max-w-[140px] truncate">{c.comment || "—"}</td>
-                                <td className="px-4 py-3 text-neutral-400">{c.createdBy}</td>
-                                <td className="px-4 py-3 text-neutral-400">{c.maxUses}</td>
-                                <td className="px-4 py-3 text-neutral-400">{c.currentUses}</td>
-                                <td className="px-4 py-3 text-neutral-400">{c.usageRate}%</td>
-                                <td className={`px-4 py-3 capitalize ${statusCodeColor[c.status] || "text-neutral-400"}`}>
-                                  {c.status}
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </section>
 
             </div>
           )}
         </div>
-
-        {/* ── Global Reach Map ──────────────────────────────────────────── */}
-        {analytics && (
-          <div className="px-6 md:px-16 pb-16">
-            <div className="border-t border-neutral-800 pt-12">
-              <div className="flex items-center justify-between mb-6">
-                <div>
-                  <p className="text-[10px] tracking-[0.25em] uppercase text-neutral-500 mb-1">
-                    Global Reach
-                  </p>
-                  <h2 className="text-lg font-light tracking-wide text-white">
-                    QR Scans &amp; Link Clicks — Live Map
-                  </h2>
-                </div>
-                <div className="flex items-center gap-6 text-[11px]" style={{ fontFamily: "'Space Mono', monospace" }}>
-                  <span className="flex items-center gap-2">
-                    <span
-                      className="inline-block w-3 h-3 rounded-full"
-                      style={{ background: "#f59e0b", boxShadow: "0 0 6px #f59e0b" }}
-                    />
-                    <span className="text-neutral-400">QR Scan</span>
-                    <span className="text-white font-bold ml-1">
-                      {analytics.mapPoints.filter((p) => p.type === "qr").length}
-                    </span>
-                  </span>
-                  <span className="flex items-center gap-2">
-                    <span
-                      className="inline-block w-3 h-3 rounded-full"
-                      style={{ background: "#3b82f6", boxShadow: "0 0 6px #3b82f6" }}
-                    />
-                    <span className="text-neutral-400">Link Click</span>
-                    <span className="text-white font-bold ml-1">
-                      {analytics.mapPoints.filter((p) => p.type === "link").length}
-                    </span>
-                  </span>
-                  <span className="text-neutral-600">
-                    {analytics.mapPoints.length} total points
-                  </span>
-                </div>
-              </div>
-
-              {/* Map container */}
-              <div className="border border-neutral-800 rounded overflow-hidden">
-                <MapView points={analytics.mapPoints} />
-              </div>
-
-              <p className="mt-3 text-[10px] tracking-wider text-neutral-700" style={{ fontFamily: "'Space Mono', monospace" }}>
-                Points represent geo-located QR code scans and link/button clicks. Location is derived from visitor IP via ip-api.com. Click any marker for details.
-              </p>
-            </div>
-          </div>
-        )}
-
-        {/* Footer */}
         <div className="flex justify-between items-center px-6 md:px-16 py-12 border-t border-neutral-800">
           <div className="text-[10px] tracking-[0.3em] uppercase text-neutral-700 font-light">Analytics Dashboard</div>
           <div className="text-[10px] tracking-[0.3em] uppercase text-neutral-700 font-light">© 2026</div>

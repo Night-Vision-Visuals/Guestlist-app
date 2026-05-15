@@ -467,25 +467,36 @@ export default function LoginPage() {
       )}
 
       {/* Navigation */}
+      
+      
       <nav className="fixed top-0 left-0 right-0 z-50 flex justify-between items-center px-6 md:px-16 py-4 border-b border-orange-900/50 backdrop-blur-sm bg-black/60">
         <div className="flex items-center gap-3">
-          <span style={{ fontFamily: "Futures, sans-serif" }} className="text-sm tracking-[0.15em] uppercase text-white">
-            Night Vision
-          </span>
-        </div>
+                    <Image
+                      src="/logo_small.png"
+                      alt="Night Vision"
+                      width={32}
+                      height={32}
+                      className="h-8 w-8 object-contain"
+                    />
+                    <span style={{ fontFamily: "Futures, sans-serif" }} className="text-sm tracking-[0.15em] uppercase text-neutral-250">
+                      Night Vision
+                    </span>
+                  
+        
+                  </div>
         <div className="flex items-center gap-6">
           <a
             href="https://instagram.com/nightvision_raw"
             target="_blank"
             rel="noopener noreferrer"
             onClick={() => track("instagram_follow_nav", "/login")}
-            className="text-xs tracking-[0.2em] uppercase text-neutral-500 hover:text-white transition-colors duration-300"
+            className="text-xs tracking-[0.2em] uppercase text-neutral-500 hover:text-orange-400 transition-colors duration-300"
           >
             Follow
           </a>
           <Link
             href="/admin"
-            className="text-xs tracking-[0.2em] uppercase text-neutral-500 hover:text-white transition-colors duration-300"
+            className="text-xs tracking-[0.2em] uppercase text-neutral-500 hover:text-orange-400 transition-colors duration-300"
           >
             Login
           </Link>
@@ -543,11 +554,11 @@ export default function LoginPage() {
 
             {/* ── STEP: CODE ── */}
             {step === "code" && (
-              <div className="w-full max-w-md mx-auto bg-black/60 backdrop-blur-md border border-orange-900/60 rounded-lg px-4 sm:px-12 py-14 flex flex-col items-center text-center space-y-8">
+              <div className="w-full max-w-md mx-auto bg-black/60 backdrop-blur-md border border-orange-900/80 rounded-lg px-4 sm:px-12 py-14 flex flex-col items-center text-center space-y-8">
 
                 {/* Headline */}
                 <div className="space-y-3">
-                  <h1 className="text-5xl md:text-6xl font-light tracking-[0.15em] leading-none" style={{ fontFamily: "Futures, sans-serif" }}>
+                  <h1 className="text-5xl md:text-6xl font-light tracking-[0.095em] leading-none" style={{ fontFamily: "Futures, sans-serif" }}>
                     <span className="bg-gradient-to-b from-white via-white to-neutral-500 bg-clip-text text-transparent">
                       ACCESS
                     </span>
@@ -560,7 +571,7 @@ export default function LoginPage() {
 
                 {/* Input */}
                 <div className="w-full space-y-4">
-                  <label className="block text-sm tracking-[0.25em] uppercase text-neutral-400">
+                  <label className="block text-sm tracking-[0.15em] uppercase text-orange-400" >
                     Access Key
                   </label>
                   <div className="flex gap-2.5 justify-center">
@@ -600,7 +611,7 @@ export default function LoginPage() {
                   target="_blank"
                   rel="noopener noreferrer"
                   onClick={() => track("request_key_click", "/login")}
-                  className="text-xs tracking-[0.2em] uppercase text-neutral-600 hover:text-white transition-colors duration-300"
+                  className="text-xs tracking-[0.2em] uppercase text-neutral-600 hover:text-orange-400 transition-colors duration-300"
                 >
                   Request Key
                 </a>
@@ -1079,7 +1090,7 @@ export default function LoginPage() {
       </div>
 
       {/* Footer */}
-      <div className="relative z-10 flex justify-between items-center border-t border-orange-900/40 backdrop-blur-sm bg-black/60 px-6 md:px-16 py-6">
+      <div className="relative z-10 flex justify-between items-center border-t border-orange-900/50 backdrop-blur-sm bg-black/60 px-6 md:px-16 py-6">
         <div className="text-[10px] tracking-[0.3em] uppercase text-neutral-700 font-light">Invitation Only</div>
         <div className="text-[10px] tracking-[0.3em] uppercase text-neutral-700 font-light">© 2026</div>
       </div>
