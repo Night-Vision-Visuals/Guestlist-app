@@ -256,6 +256,44 @@ export async function GET(req: Request) {
       applicationsByDay[day] = (applicationsByDay[day] || 0) + 1
     })
 
+    // ── QR Code scans ─────────────────────────────────────────────────────────
+    const { data: qrScansRaw } = await supabase
+      .from("qr_scans")
+      .select("scanned_at, qr_source, os, device_type, country")
+      .order("scanned_at", { ascending: true })
+
+    const qrScans = qrScansRaw || []
+
+    const posterScans  = qrScans.filter((s: any) => s.qr_source === "poster").length
+    const stickerScans = qrScans.filter((s: any) => s.qr_source === "sticker").length
+    const totalQrScans = qrScans.length
+
+    // Scans by day per source
+    const qrScansByDay: Record<string, { poster: number; sticker: number }> = {}
+    qrScans.forEach((s: any) => {
+      const day = new Date(s.scanned_at).toLocaleDateString()
+      if (!qrScansByDay[day]) qrScansByDay[day] = { poster: 0, sticker: 0 }
+      if (s.qr_source === "sticker") qrScansByDay[day].sticker++
+      else qrScansByDay[day].poster++
+    })
+
+    // Conversion rate: poster scans → applications
+    const conversionRate = posterScans > 0 ? Math.round((total / posterScans) * 100) : 0
+
+    // Top os, device_type, country
+    const countBy = (field: string) => {
+      const map: Record<string, number> = {}
+      qrScans.forEach((s: any) => {
+        const val = (s as any)[field] || "Unknown"
+        map[val] = (map[val] || 0) + 1
+      })
+      return Object.entries(map).sort((a, b) => b[1] - a[1])
+    }
+
+    const topOs      = countBy("os")
+    const topDevice  = countBy("device_type")
+    const topCountry = countBy("country")
+
     return NextResponse.json({
       event,
       statistics: {
@@ -293,6 +331,16 @@ export async function GET(req: Request) {
       inviteCodesByAdmin,
       inviteCodeDetails,
       applicationsByDay,
+      qrStats: {
+        totalScans: totalQrScans,
+        posterScans,
+        stickerScans,
+        conversionRate,
+        scansByDay: qrScansByDay,
+        topOs,
+        topDevice,
+        topCountry,
+      },
     })
   } catch (error) {
     console.error("Analytics error:", error)

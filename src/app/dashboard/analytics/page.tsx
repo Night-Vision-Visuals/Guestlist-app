@@ -82,6 +82,17 @@ interface IncomeStats {
   }
 }
 
+interface QrStats {
+  totalScans: number
+  posterScans: number
+  stickerScans: number
+  conversionRate: number
+  scansByDay: Record<string, { poster: number; sticker: number }>
+  topOs: [string, number][]
+  topDevice: [string, number][]
+  topCountry: [string, number][]
+}
+
 interface Analytics {
   event: { id: string; name: string }
   statistics: {
@@ -113,6 +124,7 @@ interface Analytics {
   inviteCodesByAdmin: AdminCodeStat[]
   inviteCodeDetails: CodeDetail[]
   applicationsByDay: Record<string, number>
+  qrStats: QrStats
 }
 
 // ─── Small reusable card ──────────────────────────────────────────────────────
@@ -192,6 +204,21 @@ export default function AnalyticsPage() {
         .map(([day, count]) => ({ day, count }))
     : []
 
+  // QR scans chart data — merge all days from both sources
+  const qrTimelineData = analytics
+    ? (() => {
+        const allDays = new Set<string>()
+        Object.keys(analytics.qrStats.scansByDay).forEach((d) => allDays.add(d))
+        return Array.from(allDays)
+          .sort((a, b) => new Date(a).getTime() - new Date(b).getTime())
+          .map((day) => ({
+            day,
+            Poster:  analytics.qrStats.scansByDay[day]?.poster  ?? 0,
+            Sticker: analytics.qrStats.scansByDay[day]?.sticker ?? 0,
+          }))
+      })()
+    : []
+
   // Age chart: pick the right count field based on gender filter
   const ageCountKey: Record<AgeGenderFilter, keyof AgeBucket> = {
     all:     "count",
@@ -258,6 +285,77 @@ export default function AnalyticsPage() {
 
           {analytics && (
             <div className="space-y-10">
+
+              {/* ── QR Code Scans ────────────────────────────────────────── */}
+              <section>
+                <h2 className="text-xs tracking-[0.3em] uppercase text-neutral-500 mb-6" style={{ fontFamily: "Futures, sans-serif" }}>QR Code Scans</h2>
+
+                {/* Stat cards */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+                  <StatCard label="Total Scans"    value={analytics.qrStats.totalScans}   color="text-white" />
+                  <StatCard label="Poster Scans"   value={analytics.qrStats.posterScans}  color="text-cyan-400"   sub="→ login page" />
+                  <StatCard label="Sticker Scans"  value={analytics.qrStats.stickerScans} color="text-purple-400" sub="→ instagram" />
+                  <StatCard
+                    label="Conversion"
+                    value={`${analytics.qrStats.conversionRate}%`}
+                    color="text-emerald-400"
+                    sub="poster scans → applications"
+                  />
+                </div>
+
+                {/* Scans over time chart */}
+                {qrTimelineData.length > 0 && (
+                  <div className="border border-neutral-800 p-8 rounded mb-4">
+                    <p className="text-xs tracking-[0.2em] uppercase text-neutral-500 mb-4">Scans Over Time</p>
+                    <ResponsiveContainer width="100%" height={220}>
+                      <LineChart data={qrTimelineData} margin={{ top: 4, right: 8, left: -24, bottom: 0 }}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#262626" />
+                        <XAxis dataKey="day" tick={{ fill: "#737373", fontSize: 10 }} />
+                        <YAxis tick={{ fill: "#737373", fontSize: 10 }} allowDecimals={false} />
+                        <Tooltip
+                          contentStyle={{ background: "#0a0a0a", border: "1px solid #262626", borderRadius: 4 }}
+                          labelStyle={{ color: "#a3a3a3", fontSize: 11 }}
+                        />
+                        <Line type="monotone" dataKey="Poster"  stroke="#22d3ee" strokeWidth={2} dot={false} />
+                        <Line type="monotone" dataKey="Sticker" stroke="#a855f7" strokeWidth={2} dot={false} />
+                      </LineChart>
+                    </ResponsiveContainer>
+                    <div className="flex gap-6 mt-3">
+                      <span className="text-[10px] text-cyan-500 tracking-[0.15em] uppercase">— Poster</span>
+                      <span className="text-[10px] text-purple-500 tracking-[0.15em] uppercase">— Sticker</span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Top breakdowns */}
+                {analytics.qrStats.totalScans > 0 && (
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    {[
+                      { label: "Device",  entries: analytics.qrStats.topDevice  },
+                      { label: "OS",      entries: analytics.qrStats.topOs      },
+                      { label: "Country", entries: analytics.qrStats.topCountry },
+                    ].map(({ label, entries }) => (
+                      <div key={label} className="border border-neutral-800 p-6 rounded">
+                        <p className="text-xs tracking-[0.2em] uppercase text-neutral-500 mb-4">{label}</p>
+                        <div className="space-y-3">
+                          {entries.slice(0, 5).map(([name, count]) => (
+                            <div key={name} className="flex items-center gap-3">
+                              <p className="text-sm text-neutral-400 w-24 truncate capitalize">{name}</p>
+                              <div className="flex-1 h-1.5 bg-neutral-900">
+                                <div
+                                  className="h-full bg-neutral-500"
+                                  style={{ width: `${Math.round((count / analytics.qrStats.totalScans) * 100)}%` }}
+                                />
+                              </div>
+                              <p className="text-xs text-neutral-500 w-8 text-right">{count}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </section>
 
               {/* ── Application Statistics ───────────────────────────────── */}
               <section>
