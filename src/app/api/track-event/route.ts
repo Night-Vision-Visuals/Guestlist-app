@@ -35,6 +35,7 @@ async function lookupGeo(ip: string): Promise<{ country: string; city: string; l
     })
     if (!res.ok) return { country: "Unknown", city: "Unknown", lat: null, lng: null }
     const data = await res.json()
+    console.log("[lookupGeo] ip-api response:", JSON.stringify(data))
     if (data.status !== "success") return { country: "Unknown", city: "Unknown", lat: null, lng: null }
     return {
       country: data.country || "Unknown",
@@ -73,6 +74,7 @@ export async function POST(req: Request) {
     const user_agent = req.headers.get("user-agent") ?? ""
     const { device_type, os } = parseUserAgent(user_agent)
     const { country, city, lat, lng } = await lookupGeo(ip_address)
+    console.log("[track-event] geo result:", { ip_address, country, city, lat, lng })
 
     const { error } = await supabase.from("interaction_events").insert({
       event_type,
