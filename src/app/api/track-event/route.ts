@@ -25,30 +25,15 @@ function parseUserAgent(ua: string): { device_type: string; os: string } {
   return { device_type, os }
 }
 
-async function lookupGeo(ip: string): Promise<{ country: string; city: string; lat: number | null; lng: number | null }> {
-  if (!ip || /^(127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|::1|localhost)/.test(ip)) {
-    return { country: "Local", city: "Local", lat: null, lng: null }
-  }
-  try {
-    const res = await fetch(`https://ipwho.is/${ip}`, {
-      signal: AbortSignal.timeout(8000),
-    })
-    console.log("[lookupGeo] ipwho.is status:", res.status, "ok:", res.ok)
-    if (!res.ok) return { country: "Unknown", city: "Unknown", lat: null, lng: null }
-    const text = await res.text()
-    console.log("[lookupGeo] ipwho.is raw response:", text.slice(0, 300))
-    const data = JSON.parse(text)
-    if (!data.success) return { country: "Unknown", city: "Unknown", lat: null, lng: null }
-    return {
-      country: data.country || "Unknown",
-      city: data.city || "Unknown",
-      lat: typeof data.latitude === "number" ? data.latitude : null,
-      lng: typeof data.longitude === "number" ? data.longitude : null,
-    }
-  } catch (err) {
-    console.error("[lookupGeo] fetch error:", err)
-    return { country: "Unknown", city: "Unknown", lat: null, lng: null }
-  }
+async function lookupGeo(req: Request): Promise<{ country: string; city: string; lat: number | null; lng: number | null }> {
+  const country = req.headers.get("x-vercel-ip-country") || "Unknown"
+  const city    = req.headers.get("x-vercel-ip-city")    || "Unknown"
+  const latStr  = req.headers.get("x-vercel-ip-latitude")
+  const lngStr  = req.headers.get("x-vercel-ip-longitude")
+  const lat = latStr  ? parseFloat(latStr)  : null
+  const lng = lngStr ? parseFloat(lngStr) : null
+  console.log("[lookupGeo] vercel headers:", { country, city, lat, lng })
+  return { country, city, lat, lng }
 }
 
 const VALID_EVENT_TYPES = new Set([
@@ -76,7 +61,7 @@ export async function POST(req: Request) {
     const ip_address = forwarded ? forwarded.split(",")[0].trim() : (req.headers.get("x-real-ip") ?? "")
     const user_agent = req.headers.get("user-agent") ?? ""
     const { device_type, os } = parseUserAgent(user_agent)
-    const { country, city, lat, lng } = await lookupGeo(ip_address)
+    const { country, city, lat, lng } = await lookupGeo(req)
     console.log("[track-event] geo result:", { ip_address, country, city, lat, lng })
 
     const { error } = await supabase.from("interaction_events").insert({
