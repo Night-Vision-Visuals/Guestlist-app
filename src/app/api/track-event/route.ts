@@ -31,11 +31,13 @@ async function lookupGeo(ip: string): Promise<{ country: string; city: string; l
   }
   try {
     const res = await fetch(`https://ipwho.is/${ip}`, {
-      signal: AbortSignal.timeout(3000),
+      signal: AbortSignal.timeout(8000),
     })
+    console.log("[lookupGeo] ipwho.is status:", res.status, "ok:", res.ok)
     if (!res.ok) return { country: "Unknown", city: "Unknown", lat: null, lng: null }
-    const data = await res.json()
-    console.log("[lookupGeo] ipwho.is response:", JSON.stringify(data))
+    const text = await res.text()
+    console.log("[lookupGeo] ipwho.is raw response:", text.slice(0, 300))
+    const data = JSON.parse(text)
     if (!data.success) return { country: "Unknown", city: "Unknown", lat: null, lng: null }
     return {
       country: data.country || "Unknown",
@@ -43,7 +45,8 @@ async function lookupGeo(ip: string): Promise<{ country: string; city: string; l
       lat: typeof data.latitude === "number" ? data.latitude : null,
       lng: typeof data.longitude === "number" ? data.longitude : null,
     }
-  } catch {
+  } catch (err) {
+    console.error("[lookupGeo] fetch error:", err)
     return { country: "Unknown", city: "Unknown", lat: null, lng: null }
   }
 }
