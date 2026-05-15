@@ -39,11 +39,19 @@ export default async function QrRedirectPage({
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        // Pass through the real client IP so the API can use it for geo lookup
-        "x-forwarded-for": ip,
         "user-agent": ua,
       },
-      body: JSON.stringify({ qr_source }),
+      body: JSON.stringify({
+        qr_source,
+        // Pass Vercel geo from the real user request — these headers are only
+        // correct here on the /qr edge request, not on the internal API fetch
+        geo: {
+          country:  headersList.get("x-vercel-ip-country")   ?? null,
+          city:     headersList.get("x-vercel-ip-city")      ?? null,
+          lat:      headersList.get("x-vercel-ip-latitude")  ?? null,
+          lng:      headersList.get("x-vercel-ip-longitude") ?? null,
+        },
+      }),
     })
   } catch {
     // Never block the redirect because of a logging failure
